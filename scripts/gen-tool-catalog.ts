@@ -38,6 +38,9 @@ import { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentLimits, ImageAttachmentRef, SaveImageAttachment, StoredImageAttachment } from '@deepseek-ai/dsh-attachment'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import PlanModeController from '@deepseek-ai/dsh-plan-mode'
+import SwarmModeController from '@deepseek-ai/dsh-swarm-mode'
+import BlueprintService from '@deepseek-ai/dsh-blueprint'
+import * as ToolBlueprint from '@deepseek-ai/dsh-tool-blueprint'
 import WebRuntime from '@deepseek-ai/dsh-web'
 import DeepSeekAuth from '@deepseek-ai/dsh-deepseek-auth'
 import * as WebDeepSeekApi from '@deepseek-ai/dsh-web-deepseek-api'
@@ -778,6 +781,32 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-swarm-mode',
+    dir: 'swarm-mode',
+    source: 'packages/subagent/swarm-mode/src/index.ts',
+    requires: ['ctx.tools', 'ctx.subagents', 'ctx.systemPrompt', 'ctx.sessionProjections'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(SubagentRuntime)
+      registerCatalogSubagentProvider(ctx, 'spawn')
+      registerCatalogSubagentProvider(ctx, 'fork')
+      await ctx.plugin(SwarmModeController)
+    },
+    note: 'Mounted in the `standard` and `ptc` presets to support parallel fan-out across `coder`, `explore`, and `plan` subagents.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-blueprint',
+    dir: 'tool-blueprint',
+    source: 'packages/extensions/tool-blueprint/src/index.ts',
+    requires: ['ctx.tools', 'ctx.blueprint', 'ctx.systemPrompt'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(BlueprintService, { root: resolve(root, '.tmp/tool-catalog/blueprint'), schedulerTickMs: 0 })
+      await ctx.plugin(ToolBlueprint)
+    },
+    note: 'Exposes the Kimi Work four-asset Blueprint tools (`Widget`, `Canvas`, `Binding`, `AutomationCreate`, `AutomationUpdate`, `AutomationControl`).',
   },
 ]
 

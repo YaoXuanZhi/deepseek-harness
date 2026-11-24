@@ -1,0 +1,58 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/extensions/tool-blueprint/README.md
+/:
+  en: 59414e0f76cb29d6
+  zh: d3b4bd01303aafd8
+/deepseek-ai-dsh-tool-blueprint:
+  en: 1857d34e0e21e174
+  zh: 9fbadf6fef6a9bcc
+/deepseek-ai-dsh-tool-blueprint/summary:
+  en: cc9ac1a31e63515a
+  zh: e2edd1daf38e2f1f
+/deepseek-ai-dsh-tool-blueprint/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 1db86285abf6c499
+/deepseek-ai-dsh-tool-blueprint/use-this-package:
+  en: 3786dfbf686d701a
+  zh: ad6e6c262a6812e6
+/deepseek-ai-dsh-tool-blueprint/understand-the-implementation:
+  en: fdd55f09427f2d70
+  zh: a8f9cf0d4d43d5c0
+/deepseek-ai-dsh-tool-blueprint/further-exploration:
+  en: c37dc3bb7f371d23
+  zh: 7be2c6f535684c5e
+/deepseek-ai-dsh-tool-blueprint/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-tool-blueprint/model-experience/blueprint-tool-schemas-and-results:
+  en: 52b658bd3614261e
+  zh: 52b658bd3614261e
+/deepseek-ai-dsh-tool-blueprint/model-experience/blueprint-tool-schemas-and-results/what-the-model-sees:
+  en: aacb08e1eddefad0
+  zh: 6e4225cd96d739c3
+/deepseek-ai-dsh-tool-blueprint/model-experience/blueprint-tool-schemas-and-results/token-effect:
+  en: 97fb5a11fbbd4486
+  zh: 0abd28b34ebfee26
+/deepseek-ai-dsh-tool-blueprint/model-experience/blueprint-tool-schemas-and-results/kv-cache-effect:
+  en: 0bd0ec94480f5ed9
+  zh: 8bd5b8a5dc62af89
+/deepseek-ai-dsh-tool-blueprint/model-experience/existing-dashboard-runtime-context:
+  en: aebd47318c3467ba
+  zh: aebd47318c3467ba
+/deepseek-ai-dsh-tool-blueprint/model-experience/existing-dashboard-runtime-context/what-the-model-sees:
+  en: 859fa4d8dfb1f839
+  zh: 60aaf3458edfd8c7
+/deepseek-ai-dsh-tool-blueprint/model-experience/existing-dashboard-runtime-context/token-effect:
+  en: a07419791f533bec
+  zh: ca6186d78482ba68
+/deepseek-ai-dsh-tool-blueprint/model-experience/existing-dashboard-runtime-context/kv-cache-effect:
+  en: 557c9ad3572cd3c6
+  zh: c1d00c8680d47646
+/deepseek-ai-dsh-tool-blueprint/known-limitations-and-deferred-work:
+  en: 98eb85fbda3e21b2
+  zh: 5a9d002f5ae10c07
+/deepseek-ai-dsh-tool-blueprint/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

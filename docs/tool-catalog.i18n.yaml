@@ -9,8 +9,8 @@
   en: 6cc2cd9ced70bb09
   zh: 1c0e6cb4ba2ed637
 /tool-schema-catalog/tool-package-map:
-  en: 30abd845c15aab11
-  zh: 584288adf33e54ac
+  en: d5783862244674e2
+  zh: 10ea5b9482315ac8
 /tool-schema-catalog/deepseek-ai-dsh-tool-session-control:
   en: 79ab575ea6da86e2
   zh: 79ab575ea6da86e2
@@ -354,5 +354,32 @@
   en: 8673f203aea9bdf2
   zh: 4e17783ffdf34c83
 /tool-schema-catalog/deepseek-ai-dsh-tool-web/web-search:
-  en: cc1ad38bf0006710
-  zh: 324eacb827a09e93
+  en: 054d73ffbf0cc978
+  zh: f73d99fa43cb66b7
+/tool-schema-catalog/deepseek-ai-dsh-swarm-mode:
+  en: 1846af917ccbb907
+  zh: 1846af917ccbb907
+/tool-schema-catalog/deepseek-ai-dsh-swarm-mode/agent-swarm:
+  en: 4096c5796707bb7e
+  zh: cf3ed5f52951bbc0
+/tool-schema-catalog/deepseek-ai-dsh-tool-blueprint:
+  en: 76b25b1e862f7409
+  zh: 76b25b1e862f7409
+/tool-schema-catalog/deepseek-ai-dsh-tool-blueprint/automationcontrol:
+  en: 67f8081af63c7bd9
+  zh: ba634c3bb6a2ef38
+/tool-schema-catalog/deepseek-ai-dsh-tool-blueprint/automationcreate:
+  en: 151d7db076e71cfb
+  zh: 17ae452a2c088e48
+/tool-schema-catalog/deepseek-ai-dsh-tool-blueprint/automationupdate:
+  en: 8298d37f3133d08c
+  zh: 9f97dbdd8ba305cb
+/tool-schema-catalog/deepseek-ai-dsh-tool-blueprint/binding:
+  en: d05f0f57375cbfe4
+  zh: d336b9206a18b8a7
+/tool-schema-catalog/deepseek-ai-dsh-tool-blueprint/canvas:
+  en: fe066e24ecfe30b7
+  zh: c4f446a990ee05c9
+/tool-schema-catalog/deepseek-ai-dsh-tool-blueprint/widget:
+  en: 4a4b0355fe523d2a
+  zh: dd6dce5a0bbd33ab

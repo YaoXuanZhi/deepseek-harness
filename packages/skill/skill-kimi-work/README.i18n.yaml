@@ -1,0 +1,37 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/skill/skill-kimi-work/README.md
+/:
+  en: 52b696e4870c2f2f
+  zh: e71255caa7daa5c4
+/deepseek-ai-dsh-skill-kimi-work:
+  en: 5efb5481a1b361c8
+  zh: 75bafa854613f5b3
+/deepseek-ai-dsh-skill-kimi-work/summary:
+  en: 326af3d565db6151
+  zh: 9d9c69bf59edc838
+/deepseek-ai-dsh-skill-kimi-work/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 1db86285abf6c499
+/deepseek-ai-dsh-skill-kimi-work/use-this-package:
+  en: e6469b5c9f85afba
+  zh: 6e026184c6364821
+/deepseek-ai-dsh-skill-kimi-work/understand-the-implementation:
+  en: 0bbfb5bd14370e40
+  zh: 4222b6c0cf59c3d6
+/deepseek-ai-dsh-skill-kimi-work/further-exploration:
+  en: eae2a634eb3e5af4
+  zh: 8a740cc02597f464
+/deepseek-ai-dsh-skill-kimi-work/model-experience:
+  en: cdfa4299c95d3235
+  zh: 62e9c1a79791720f
+/deepseek-ai-dsh-skill-kimi-work/model-experience/kv-cache-effect:
+  en: 4d24a30ac73ce340
+  zh: 01f0b37910df4426
+/deepseek-ai-dsh-skill-kimi-work/known-limitations-and-deferred-work:
+  en: d32be11d03b3b6d2
+  zh: 21dffbce018b7d3f
+/deepseek-ai-dsh-skill-kimi-work/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

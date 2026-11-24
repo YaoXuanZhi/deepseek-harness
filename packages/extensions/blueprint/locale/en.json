@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Blueprint runtime",
+    "description": "Store and execute interactive Widgets, 12-column Canvas dashboards, Automations, and schema-validated Bindings."
+  }
+}

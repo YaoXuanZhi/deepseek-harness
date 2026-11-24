@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "集群模式",
+    "description": "通过 /swarm 模式与 agent_swarm 并行派发工具协同多个专业子代理并发执行任务。"
+  }
+}

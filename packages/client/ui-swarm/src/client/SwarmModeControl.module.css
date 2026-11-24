@@ -1,0 +1,77 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  background-color: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+@media (hover: hover) {
+  .chip:hover:not(:disabled) {
+    background-color: var(--dsw-alias-interactive-bg-hover);
+    color: var(--dsw-alias-label-primary);
+  }
+}
+
+.chipActive {
+  border-color: transparent;
+  background-color: var(--dsw-alias-state-business-tertiary);
+  color: var(--dsw-alias-state-business-primary);
+}
+
+@media (hover: hover) {
+  .chipActive:hover:not(:disabled) {
+    background-color: var(--dsw-alias-interactive-bg-active);
+    color: var(--dsw-alias-state-business-primary);
+  }
+}
+
+.chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.closeGlyph {
+  display: none;
+}
+
+@media (hover: hover) {
+  .chipActive:hover:not(:disabled) .clusterGlyph {
+    display: none;
+  }
+
+  .chipActive:hover:not(:disabled) .closeGlyph {
+    display: inline-flex;
+  }
+}
+
+.error {
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  line-height: 1.3;
+}

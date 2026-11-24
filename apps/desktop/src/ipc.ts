@@ -7,6 +7,7 @@ import type { DesktopKeyboardApi, DesktopShortcutsApi } from '@deepseek-ai/dsh-c
 import type { IpcMainInvokeEvent } from 'electron'
 import type { DesktopBrowserBridge } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import type { DesktopFileDrag } from '@deepseek-ai/dsh-util-file-drag'
+import type { DesktopWidgetPinsBridge } from '@deepseek-ai/dsh-blueprint/desktop-pins'
 
 /** IPC channel names kept private to the desktop application bundle. */
 export const DESKTOP_IPC = {
@@ -44,6 +45,19 @@ export const DESKTOP_IPC = {
   windowFullscreen: 'dsh-desktop:window-fullscreen',
   windowsAppearance: 'dsh-desktop:windows-appearance',
   windowsMenu: 'dsh-desktop:windows-menu',
+  widgetPinOpen: 'dsh-desktop:widget-pin-open',
+  widgetPinSync: 'dsh-desktop:widget-pin-sync',
+  widgetPinClose: 'dsh-desktop:widget-pin-close',
+  widgetPinList: 'dsh-desktop:widget-pin-list',
+  widgetPinFilesReply: 'dsh-desktop:widget-pin-files-reply',
+  widgetPinUpstream: 'dsh-desktop:widget-pin-upstream',
+  widgetPinBootstrap: 'dsh-desktop:widget-pin-bootstrap',
+  widgetPinStatePush: 'dsh-desktop:widget-pin-state-push',
+  widgetPinFilesResult: 'dsh-desktop:widget-pin-files-result',
+  widgetPinSetTop: 'dsh-desktop:widget-pin-set-top',
+  widgetPinFocusMain: 'dsh-desktop:widget-pin-focus-main',
+  widgetPinRequestClose: 'dsh-desktop:widget-pin-request-close',
+  widgetPinChildAction: 'dsh-desktop:widget-pin-child-action',
 } as const
 
 /** Desktop release update state rendered by desktop-owned UI. */
@@ -97,6 +111,7 @@ export interface DshDesktopProductApi {
   readonly fileDrag: DesktopFileDrag
   readonly keyboard: DesktopKeyboardApi
   readonly shortcuts: DesktopShortcutsApi
+  readonly widgetPins?: DesktopWidgetPinsBridge
   /**
    * Local machine description for the feedback questionnaire.
    * @returns `name=value` fields separated by `; `, with no hostname, user name, or serial number.

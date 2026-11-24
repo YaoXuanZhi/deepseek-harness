@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Modo enjambre",
+    "description": "Coordina subagentes especialistas en paralelo mediante el modo /swarm y la herramienta agent_swarm."
+  }
+}

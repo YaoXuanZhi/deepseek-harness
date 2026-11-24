@@ -37,3 +37,25 @@ body {
 [data-dsh-automatic-focus]:focus:focus-visible {
   outline: none;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-dsh-theme-transition]::view-transition-old(root),
+  html[data-dsh-theme-transition]::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  html[data-dsh-theme-transition]::view-transition-new(root) {
+    animation: dsh-theme-circle-reveal 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+}
+
+@keyframes dsh-theme-circle-reveal {
+  from {
+    clip-path: circle(0px at var(--dsh-theme-switch-x, 50vw) var(--dsh-theme-switch-y, 50vh));
+  }
+
+  to {
+    clip-path: circle(var(--dsh-theme-switch-r, 150vmax) at var(--dsh-theme-switch-x, 50vw) var(--dsh-theme-switch-y, 50vh));
+  }
+}

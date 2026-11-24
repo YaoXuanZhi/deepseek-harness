@@ -43,7 +43,7 @@ import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/d
 import type { ModelLabelOwner, ModelMenuControls, ModelMenuPaneRef, ModelSelectInjected } from './slots.ts'
 import css from './ModelSelect.module.css'
 import { TextSearchIndex } from '@deepseek-ai/dsh-util-text-search'
-import { orderModelProviders } from './provider-order.ts'
+import { clampModelSwitchEffort, orderModelProviders } from './provider-order.ts'
 
 /** Which pane the dropdown shows: the root menu, one drilled-in list, or a plugin-owned detail pane. */
 type Pane =
@@ -420,7 +420,18 @@ export function ModelSelect(
       closeAfterSelection()
       return
     }
-    submit(selection)
+    const target = choices.find(choice =>
+      choice.selection.provider === selection.provider && choice.selection.model === selection.model)
+    const clampedEffort = selection.reasoningEffort ?? (
+      state.current?.reasoningEffort === undefined
+        ? undefined
+        : clampModelSwitchEffort(state.current.reasoningEffort, target?.model.reasoning)
+    )
+    submit({
+      provider: selection.provider,
+      model: selection.model,
+      ...clampedEffort === undefined ? {} : { reasoningEffort: clampedEffort },
+    })
   }
 
   const chooseEffort = (effort: string | undefined): void => {

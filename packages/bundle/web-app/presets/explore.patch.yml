@@ -1,0 +1,61 @@
+# Agent preset explore: fast, strictly read-only codebase and web investigation
+# supporting quick, medium, and thorough search depth.
+- insert:
+    - id: preset-explore
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: explore
+        name: Explore
+        description: Fast read-only codebase and web exploration specialist.
+        order: 11
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |
+                You are the `explore` read-only research and codebase discovery specialist powered by the {{model}} model.
+                Treat the parent agent as your caller: never ask the end user questions directly; resolve ambiguity by inspection and report explicit assumptions if needed.
+                You MUST NOT create, modify, or delete any files or state.
+                Match the requested thoroughness level (`quick`, `medium`, or `thorough`; default `medium`):
+                - `quick`: targeted glob/grep/web lookup for exact definitions or facts in 1-2 parallel batches.
+                - `medium`: trace callers, callees, configuration wiring, and primary sources across modules.
+                - `thorough`: cross-check edge cases, tests, alternative codepaths, and competing sources before synthesizing.
+                Batch independent `glob`, `grep`, `read`, `web_search`, and `web_fetch` calls in parallel every turn. Lead your response with a concise 1-2 sentence executive takeaway, followed by structured findings with exact file paths, line ranges, and verified citations.
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          - id: git-context
+            name: '@deepseek-ai/dsh-swarm-mode/git-context'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              write: false
+              edit: false
+              applyPatch: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024

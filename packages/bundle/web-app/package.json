@@ -39,6 +39,9 @@
     "presets/ptc.patch.yml",
     "presets/minimal.patch.yml",
     "presets/cordis.patch.yml",
+    "presets/coder.patch.yml",
+    "presets/explore.patch.yml",
+    "presets/plan.patch.yml",
     "lib/public-url-*.js",
     "lib/types/**/*.d.ts",
     "lib/types/**/*.d.ts.map",
@@ -53,7 +56,10 @@
         "./presets/standard.patch.yml",
         "./presets/ptc.patch.yml",
         "./presets/minimal.patch.yml",
-        "./presets/cordis.patch.yml"
+        "./presets/cordis.patch.yml",
+        "./presets/coder.patch.yml",
+        "./presets/explore.patch.yml",
+        "./presets/plan.patch.yml"
       ]
     }
   },
@@ -174,6 +180,12 @@
     "@deepseek-ai/dsh-session-turn-outline": "workspace:*",
     "@deepseek-ai/dsh-skill-filesystem": "workspace:*",
     "@deepseek-ai/dsh-skill-office": "workspace:*",
+    "@deepseek-ai/dsh-skill-kimi-work": "workspace:*",
+    "@deepseek-ai/dsh-swarm-mode": "workspace:*",
+    "@deepseek-ai/dsh-blueprint": "workspace:*",
+    "@deepseek-ai/dsh-tool-blueprint": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-swarm": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-blueprint": "workspace:*",
     "@deepseek-ai/dsh-subprocess": "workspace:*",
     "@deepseek-ai/dsh-terminal": "workspace:*",
     "@deepseek-ai/dsh-terminal-bash": "workspace:*",

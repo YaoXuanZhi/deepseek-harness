@@ -12,6 +12,7 @@ import { syncWindowsAppearance } from './preload-windows.ts'
 import { installMandatoryUpdateOverlay } from './preload-mandatory-overlay.ts'
 import { createDesktopBrowserBridge } from './preload-browser.ts'
 import type { FileDragHandle } from '@deepseek-ai/dsh-util-file-drag'
+import type { DesktopWidgetPinEvent } from '@deepseek-ai/dsh-blueprint/desktop-pins'
 
 function createProductApi(): DshDesktopProductApi {
   return {
@@ -81,6 +82,18 @@ function createProductApi(): DshDesktopProductApi {
         const handle = (_event: Electron.IpcRendererEvent, state: DesktopUpdatePresentation): void => { listener(state) }
         ipcRenderer.on(DESKTOP_IPC.updatesPresentation, handle)
         return () => { ipcRenderer.off(DESKTOP_IPC.updatesPresentation, handle) }
+      },
+    },
+    widgetPins: {
+      open: payload => ipcRenderer.invoke(DESKTOP_IPC.widgetPinOpen, payload) as Promise<{ pinned: boolean; alwaysOnTop: boolean }>,
+      sync: payload => ipcRenderer.invoke(DESKTOP_IPC.widgetPinSync, payload) as Promise<boolean>,
+      close: widgetId => ipcRenderer.invoke(DESKTOP_IPC.widgetPinClose, widgetId) as Promise<boolean>,
+      list: () => ipcRenderer.invoke(DESKTOP_IPC.widgetPinList) as Promise<readonly string[]>,
+      replyFilesCall: reply => ipcRenderer.invoke(DESKTOP_IPC.widgetPinFilesReply, reply) as Promise<void>,
+      subscribe(listener) {
+        const handle = (_event: Electron.IpcRendererEvent, ev: DesktopWidgetPinEvent): void => { listener(ev) }
+        ipcRenderer.on(DESKTOP_IPC.widgetPinUpstream, handle)
+        return () => { ipcRenderer.off(DESKTOP_IPC.widgetPinUpstream, handle) }
       },
     },
   }

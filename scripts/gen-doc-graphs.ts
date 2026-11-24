@@ -702,6 +702,13 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Folds logged plan/mode state, flushes user selections at turn boundaries, renders deployment-owned guidance, registers /plan, and keeps the plan-exit schema stable across transitions.',
   },
   {
+    key: 'swarmMode',
+    pkg: 'swarm-mode',
+    title: 'Swarm collaboration state and parallel fan-out',
+    mode: 'core',
+    note: 'Folds logged /swarm command state into a session projection, renders parallel delegation guidance, registers /swarm, and exposes the agent_swarm batch fan-out tool over ctx.subagents.',
+  },
+  {
     key: 'agentPresets',
     pkg: 'agent-preset-registry',
     title: 'Per-session agent composition',
@@ -736,7 +743,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'skill',
     title: 'Skill provider registry',
     mode: 'seam',
-    implementations: ['sandbox-windows-acl', 'skill-badge', 'skill-filesystem', 'skill-office'],
+    implementations: ['sandbox-windows-acl', 'skill-badge', 'skill-filesystem', 'skill-kimi-work', 'skill-office'],
     consumers: ['tool-skill'],
     note: 'Merges provider skill catalogs; tool-skill renders the session-prefix catalog and loads complete skill bodies.',
   },
@@ -1063,6 +1070,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     mode: 'core',
     consumers: ['tool-cordis'],
     note: 'Registers host inspect providers, mirrors the client provider manifest, and routes client queries through the dynamic Cordis transport.',
+  },
+  {
+    key: 'blueprint',
+    pkg: 'blueprint',
+    title: 'Durable Blueprint asset store and automation runtime',
+    mode: 'core',
+    consumers: ['tool-blueprint'],
+    note: 'Owns durable Widget, 12-column and free-layout Canvas, Automation, and schema-validated Binding state, serves sandboxed Widget HTML over webServer, and publishes Remote operations to browser dashboards.',
   },
   {
     key: 'liveshareShares',

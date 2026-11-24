@@ -3,7 +3,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FontFamilies, ThemePreference, ThemeSnapshot } from '@deepseek-ai/dsh-client-ui-theme/client'
 import { fontFamilyVariable } from '@deepseek-ai/dsh-client-ui-theme/src/theme-settings.ts'
-import { DARK_ATTRIBUTE, THEME_SOURCE_ATTRIBUTE, ThemePresenter } from '@deepseek-ai/dsh-client-ui-layout/src/client/theme-presenter.ts'
+import {
+  DARK_ATTRIBUTE, THEME_SOURCE_ATTRIBUTE, THEME_TRANSITION_ATTRIBUTE, ThemePresenter,
+} from '@deepseek-ai/dsh-client-ui-layout/src/client/theme-presenter.ts'
 
 const LIGHT_THEME_COLOR = 'rgb(255, 255, 255)'
 const DARK_THEME_COLOR = 'rgb(21, 21, 23)'
@@ -201,5 +203,51 @@ describe('ThemePresenter', () => {
     expect(document.body.style.getPropertyValue('--dsh-code-font-size')).toBe('')
     expect(document.body.style.getPropertyValue('--foreign')).toBe('kept')
     expect(meta?.isConnected).toBe(false)
+  })
+
+  it('animates scheme flips through startViewTransition from the pointer origin or viewport center and skips reduced motion', async () => {
+    const presenter = new ThemePresenter()
+    presenter.start()
+    let finish!: () => void
+    const startViewTransition = vi.fn((update: () => void) => {
+      update()
+      return { finished: new Promise<void>((resolve) => { finish = resolve }) }
+    })
+    Object.defineProperty(document, 'startViewTransition', { configurable: true, writable: true, value: startViewTransition })
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true }) as MediaQueryList))
+    try {
+      presenter.apply(snapshot('light'))
+      expect(startViewTransition).not.toHaveBeenCalled()
+
+      // Viewport-center fallback before any pointer interaction.
+      presenter.apply(snapshot('dark'))
+      expect(startViewTransition).toHaveBeenCalledTimes(1)
+      expect(document.documentElement.hasAttribute(THEME_TRANSITION_ATTRIBUTE)).toBe(true)
+      expect(document.documentElement.style.getPropertyValue('--dsh-theme-switch-x')).not.toBe('')
+      finish()
+      await Promise.resolve()
+      expect(document.documentElement.hasAttribute(THEME_TRANSITION_ATTRIBUTE)).toBe(false)
+      expect(document.documentElement.style.getPropertyValue('--dsh-theme-switch-x')).toBe('')
+
+      // Recorded pointer origin on subsequent switch.
+      const pointerEvent = Object.assign(new Event('pointerdown', { bubbles: true }), { clientX: 120, clientY: 64 })
+      document.dispatchEvent(pointerEvent)
+      presenter.apply(snapshot('light'))
+      expect(startViewTransition).toHaveBeenCalledTimes(2)
+      expect(document.documentElement.style.getPropertyValue('--dsh-theme-switch-x')).toBe('120px')
+      expect(document.documentElement.style.getPropertyValue('--dsh-theme-switch-y')).toBe('64px')
+      finish()
+      await Promise.resolve()
+
+      // Reduced motion skips the ViewTransition wrapper cleanly.
+      vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false }) as MediaQueryList))
+      presenter.apply(snapshot('dark'))
+      expect(startViewTransition).toHaveBeenCalledTimes(2)
+      expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(true)
+    } finally {
+      Reflect.deleteProperty(document, 'startViewTransition')
+      vi.unstubAllGlobals()
+      presenter.dispose()
+    }
   })
 })

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Schwarmmodus",
+    "description": "Koordiniert spezialisierte Unteragenten parallel über den Modus /swarm und das Werkzeug agent_swarm."
+  }
+}

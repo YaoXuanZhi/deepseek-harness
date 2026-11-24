@@ -30,6 +30,8 @@ The extensions group provides read-only runtime API discovery for agents, proces
 | [`ui-cordis`](ui-cordis/README.md) | Browser panel and historical lifecycle tool cards | client face; registers slots |
 | [`creation-recommendations`](creation-recommendations/README.md) | Explicit-need creation of persistent removable interface plugins | — |
 | [`plugin-recommendations`](plugin-recommendations/README.md) | Explicit-need official plugin recommendations in conversations | provides `ctx.pluginRecommendations` |
+| [`blueprint`](blueprint/README.md) | Durable Host runtime for Widgets, 12-column Canvas dashboards, Automations, and schema-validated Bindings | provides `ctx.blueprint` |
+| [`tool-blueprint`](tool-blueprint/README.md) | Model-facing `Widget`, `Canvas`, `Binding`, and `Automation*` tools | registers on `ctx.tools` |
 
 -----
 

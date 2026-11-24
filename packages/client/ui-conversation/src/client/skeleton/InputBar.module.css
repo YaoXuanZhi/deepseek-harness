@@ -389,7 +389,8 @@
   cursor: default;
 }
 
-/* The send control keeps its semantic primary fill in both palettes. */
+/* The send control uses high-contrast ink in both palettes (dark ink in light,
+   crisp light ink in dark). */
 .primary {
   display: grid;
   place-items: center;
@@ -399,10 +400,8 @@
   border: none;
   border-radius: 999px;
   corner-shape: round;
-  background: var(--dsw-alias-button-info-fill);
-  /* On-color ink, not the foreground token: the arrow stays white on the blue
-     fill in both themes (design 34:10465). */
-  color: var(--dsw-alias-label-on-color);
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
   cursor: pointer;
   transition: background-color 100ms ease;
 }
@@ -414,7 +413,7 @@
 
 @media (hover: hover) {
   .primary:hover:not(:disabled) {
-    background: var(--dsw-alias-button-info-hover);
+    background: var(--dsw-alias-button-primary-hover);
   }
 }
 

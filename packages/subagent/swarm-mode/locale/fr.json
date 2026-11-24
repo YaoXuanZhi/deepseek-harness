@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Mode essaim",
+    "description": "Coordonne des sous-agents spécialisés en parallèle via le mode /swarm et l'outil agent_swarm."
+  }
+}

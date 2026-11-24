@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Инструменты Blueprint",
+    "description": "Предоставляет агентам инструменты Widget, Canvas, Binding и Automation."
+  }
+}

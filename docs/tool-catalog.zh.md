@@ -56,6 +56,8 @@
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-workspace-dependencies` | `load_workspace_dependencies` | `ctx.tools` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+| `@deepseek-ai/dsh-swarm-mode` | `agent_swarm` | `ctx.tools`、`ctx.subagents`、`ctx.systemPrompt`、`ctx.sessionProjections` | `tool/call`、`tool/result` | - | 在 `standard` 与 `ptc` preset 中挂载，支持跨 `coder`、`explore` 与 `plan` 子代理执行批量并行扇出。 |
+| `@deepseek-ai/dsh-tool-blueprint` | `AutomationControl`、`AutomationCreate`、`AutomationUpdate`、`Binding`、`Canvas`、`Widget` | `ctx.tools`、`ctx.blueprint`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | 公开 Kimi Work 四元蓝图工具（`Widget`、`Canvas`、`Binding`、`AutomationCreate`、`AutomationUpdate`、`AutomationControl`）。 |
 
 <a id="deepseek-aidsh-tool-session-control"></a>
 
@@ -2888,3 +2890,527 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
 来源：[`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
 
 web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。
+
+<a id="deepseek-aidsh-swarm-mode"></a>
+
+## `@deepseek-ai/dsh-swarm-mode`
+
+### `agent_swarm`
+
+并行启动一批专业角色子代理（`coder`、`explore`、`plan`）或同构工作项，等待整批全部子助手执行完毕后，统一返回单个包含 `<summary>`、可选 `<resume_hint>` 与各助手 `<subagent>` 输出的 `<agent_swarm_result>` XML 信息汇总块。同时支持同构批量扇出（`items` + `prompt_template` 中的 `{{item}}`）、异构多角色专家组协同（`roles`：`[{ role, preset, prompt }]`）以及通过 `resume_agent_ids` 沿用已有上下文续跑失败／中断或后续追问的子助手。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "Short 3-8 word title for this parallel batch, in the language of the user request."
+    },
+    "prompt_template": {
+      "type": "string",
+      "description": "Complete task template containing `{{item}}` for homogeneous `items` batches."
+    },
+    "items": {
+      "type": "array",
+      "description": "List of 2 to 128 distinct work items to expand with `prompt_template` in parallel.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "roles": {
+      "type": "array",
+      "description": "Heterogeneous specialist role panel where each assistant investigates or executes from its own named role perspective in parallel.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Distinct specialist role label (for example `架构规划`, `代码取证`, `安全审计`)."
+          },
+          "preset": {
+            "type": "string",
+            "description": "Specialist role preset (`coder`, `explore`, `plan`); defaults to `agent_preset` or `coder`.",
+            "enum": [
+              "coder",
+              "explore",
+              "plan"
+            ]
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Complete, self-contained task prompt for this specialist role."
+          }
+        },
+        "required": [
+          "role",
+          "prompt"
+        ]
+      }
+    },
+    "agent_preset": {
+      "type": "string",
+      "description": "Default specialist role preset for spawned assistants (`coder`). Ignored when `fork` is true.",
+      "enum": [
+        "coder",
+        "explore",
+        "plan"
+      ]
+    },
+    "subagent_type": {
+      "type": "string",
+      "description": "Alias for `agent_preset` selecting the specialist subagent preset (`coder`, `explore`, or `plan`).",
+      "enum": [
+        "coder",
+        "explore",
+        "plan"
+      ]
+    },
+    "resume_agent_ids": {
+      "type": "object",
+      "description": "Map of existing `agent_id` (such as `agent-1`) to a follow-up prompt string to resume from preserved subagent context.",
+      "additionalProperties": true
+    },
+    "fork": {
+      "type": "boolean",
+      "description": "Set true only when every spawned child needs this conversation's prior history; defaults to false (clean specialist context)."
+    }
+  },
+  "required": [
+    "description"
+  ]
+}
+```
+
+来源：[`packages/subagent/swarm-mode/src/index.ts`](../packages/subagent/swarm-mode/src/index.ts)
+
+在 `standard` 与 `ptc` preset 中挂载，支持跨 `coder`、`explore` 与 `plan` 子代理执行批量并行扇出。
+
+<a id="deepseek-aidsh-tool-blueprint"></a>
+
+## `@deepseek-ai/dsh-tool-blueprint`
+
+### `AutomationControl`
+
+检查、运行、启用、停用、取消或删除蓝图自动化任务（`read`、`list`、`enable`、`disable`、`run`、`cancel`、`list_runs`、`read_run`、`preview_delete`、`delete`）。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "Control action to run.",
+      "enum": [
+        "read",
+        "list",
+        "enable",
+        "disable",
+        "run",
+        "cancel",
+        "list_runs",
+        "read_run",
+        "preview_delete",
+        "delete"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "description": "Automation id (or Run id for `read_run` and `cancel`)."
+    },
+    "input_json": {
+      "type": "string",
+      "description": "Optional JSON input payload passed to `ctx[\"input\"]` when `action === \"run\"`."
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+来源：[`packages/extensions/tool-blueprint/src/index.ts`](../packages/extensions/tool-blueprint/src/index.ts)
+
+### `AutomationCreate`
+
+创建蓝图自动化任务（`定时任务` 或 `小组件任务`）。自动化任务**默认以关闭状态创建**（`enabled: false`），以便用户先审阅任务卡并自行点击开启或立即运行，除非用户明确要求立即激活定时调度。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Optional stable automation id."
+    },
+    "title": {
+      "type": "string",
+      "description": "Concise task title in the user's language."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional explanation of what the task computes or monitors."
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Defaults to `false`. Set `true` only when the user explicitly requests immediate schedule activation."
+    },
+    "trigger_kind": {
+      "type": "string",
+      "description": "Trigger mode (default `manual`).",
+      "enum": [
+        "manual",
+        "schedule",
+        "interval",
+        "once",
+        "condition"
+      ]
+    },
+    "cron": {
+      "type": "string",
+      "description": "5-field cron expression when `trigger_kind === \"schedule\"`, e.g. `\"0 9 * * 1-5\"`."
+    },
+    "time_zone": {
+      "type": "string",
+      "description": "Optional IANA timezone for `schedule`."
+    },
+    "every_ms": {
+      "type": "number",
+      "description": "Interval in milliseconds (`>= 5000`) when `trigger_kind === \"interval\"`."
+    },
+    "run_at": {
+      "type": "string",
+      "description": "ISO-8601 timestamp when `trigger_kind === \"once\"`."
+    },
+    "condition_expression": {
+      "type": "string",
+      "description": "Condition expression when `trigger_kind === \"condition\"`."
+    },
+    "execution_type": {
+      "type": "string",
+      "description": "`code` for Python `def run(ctx)` returning JSON, or `agent` for prompt-driven task.",
+      "enum": [
+        "code",
+        "agent"
+      ]
+    },
+    "code": {
+      "type": "string",
+      "description": "Python module source defining `def run(ctx): ...` when `execution_type === \"code\"`."
+    },
+    "prompt": {
+      "type": "string",
+      "description": "Agent task prompt when `execution_type === \"agent\"`."
+    },
+    "input_schema_json": {
+      "type": "string",
+      "description": "Optional JSON Schema string for `input` port."
+    },
+    "result_schema_json": {
+      "type": "string",
+      "description": "Optional JSON Schema string for `result` artifact port."
+    }
+  },
+  "required": [
+    "title",
+    "execution_type"
+  ]
+}
+```
+
+来源：[`packages/extensions/tool-blueprint/src/index.ts`](../packages/extensions/tool-blueprint/src/index.ts)
+
+### `AutomationUpdate`
+
+更新已有蓝图自动化任务的标题、触发规则、Python 代码或提示词，以及输入／输出 JSON Schema。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Automation id to update."
+    },
+    "title": {
+      "type": "string",
+      "description": "Updated title."
+    },
+    "description": {
+      "type": "string",
+      "description": "Updated description."
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Optional enabled state."
+    },
+    "trigger_kind": {
+      "type": "string",
+      "description": "Updated trigger kind.",
+      "enum": [
+        "manual",
+        "schedule",
+        "interval",
+        "once",
+        "condition"
+      ]
+    },
+    "cron": {
+      "type": "string",
+      "description": "Updated 5-field cron expression."
+    },
+    "every_ms": {
+      "type": "number",
+      "description": "Updated interval in milliseconds."
+    },
+    "run_at": {
+      "type": "string",
+      "description": "Updated ISO-8601 timestamp."
+    },
+    "code": {
+      "type": "string",
+      "description": "Updated Python `def run(ctx)` source."
+    },
+    "prompt": {
+      "type": "string",
+      "description": "Updated agent prompt."
+    },
+    "input_schema_json": {
+      "type": "string",
+      "description": "Updated input JSON Schema."
+    },
+    "result_schema_json": {
+      "type": "string",
+      "description": "Updated result JSON Schema."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+来源：[`packages/extensions/tool-blueprint/src/index.ts`](../packages/extensions/tool-blueprint/src/index.ts)
+
+### `Binding`
+
+创建、校验、列出、读取与删除自动化任务与小组件之间经 JSON Schema 校验的数据／事件绑定（`automation.result -> widget.slot:main` 或 `widget.event:submit -> automation.input`）。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "Binding operation to execute.",
+      "enum": [
+        "create",
+        "read",
+        "list",
+        "validate",
+        "delete"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "description": "Binding id (optional for `create`, required for `read`, `validate`, `delete`)."
+    },
+    "source_kind": {
+      "type": "string",
+      "description": "Source asset kind (`create`).",
+      "enum": [
+        "automation",
+        "widget"
+      ]
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Source asset id (`create`)."
+    },
+    "source_port": {
+      "type": "string",
+      "description": "Source port name (`\"result\"` for automation, `\"event:submit\"` for widget)."
+    },
+    "target_kind": {
+      "type": "string",
+      "description": "Target asset kind (`create`).",
+      "enum": [
+        "automation",
+        "widget"
+      ]
+    },
+    "target_id": {
+      "type": "string",
+      "description": "Target asset id (`create`)."
+    },
+    "target_port": {
+      "type": "string",
+      "description": "Target port name (`\"slot:main\"` for widget, `\"input\"` for automation)."
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+来源：[`packages/extensions/tool-blueprint/src/index.ts`](../packages/extensions/tool-blueprint/src/index.ts)
+
+### `Canvas`
+
+在 12 列响应式栅格（`x: 0..11, w: 2..12, h: 2..33`）或自由画布布局上创建、列出、查看、排布与更新多小组件持久化看板（`看板`）。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "Dashboard operation to execute.",
+      "enum": [
+        "list",
+        "create",
+        "read",
+        "update",
+        "place_widget",
+        "update_placement",
+        "remove_placement",
+        "set_view_state",
+        "delete"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "description": "Canvas id (for `create`, `read`, `update`, `place_widget`, `update_placement`, `remove_placement`, `set_view_state`, `delete`)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Dashboard title (required for `create`)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional dashboard subtitle or purpose."
+    },
+    "layout_mode": {
+      "type": "string",
+      "description": "Layout mode (`grid` 12-column default, or `free`).",
+      "enum": [
+        "grid",
+        "free"
+      ]
+    },
+    "widget_id": {
+      "type": "string",
+      "description": "Widget id to place on the Canvas (`place_widget`)."
+    },
+    "placement_id": {
+      "type": "string",
+      "description": "Placement id or widget id to resize/reposition/remove (`update_placement`, `remove_placement`)."
+    },
+    "x": {
+      "type": "number",
+      "description": "Grid column `0..11` (or pixel `x` in free mode)."
+    },
+    "y": {
+      "type": "number",
+      "description": "Grid row `>= 0` (or pixel `y` in free mode)."
+    },
+    "w": {
+      "type": "number",
+      "description": "Grid column span `2..12` (`x + w <= 12`)."
+    },
+    "h": {
+      "type": "number",
+      "description": "Grid row span `2..33` (`32px` per row unit)."
+    },
+    "zoom": {
+      "type": "number",
+      "description": "Viewport zoom (`0.25..2.5`) for `set_view_state`."
+    },
+    "pan_x": {
+      "type": "number",
+      "description": "Viewport pan X for `set_view_state`."
+    },
+    "pan_y": {
+      "type": "number",
+      "description": "Viewport pan Y for `set_view_state`."
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+来源：[`packages/extensions/tool-blueprint/src/index.ts`](../packages/extensions/tool-blueprint/src/index.ts)
+
+### `Widget`
+
+创建、更新、校验、查看并展示交互式 HTML/CSS/JS 小组件（`小组件`）。在执行 `show` 或将小组件放入 `Canvas` 前必须先执行 `validate`。宿主会自动注入 Kimi Perspective `--kp-*` 令牌与 `window.DaimonWidget`。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "Operation to perform on a Blueprint Widget.",
+      "enum": [
+        "create",
+        "read",
+        "list",
+        "update",
+        "validate",
+        "show",
+        "delete",
+        "read_file",
+        "write_file"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "description": "Widget id (1-64 alphanumeric/hyphen/underscore chars). Required for read, update, validate, show, delete, read_file, and write_file."
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable widget title (required for `create`)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional concise description of what the widget visualizes or computes."
+    },
+    "html": {
+      "type": "string",
+      "description": "Complete `index.html` markup for `create` or `update`. Use `--kp-*` CSS tokens and `window.DaimonWidget`."
+    },
+    "slots_json": {
+      "type": "string",
+      "description": "Optional JSON object declaring data slots and schemas, e.g. `{\"main\":{\"schema\":{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"array\"}}}}}`."
+    },
+    "events_json": {
+      "type": "string",
+      "description": "Optional JSON object declaring outbound events, e.g. `{\"submit\":{\"schema\":{\"type\":\"object\",\"required\":[\"query\"],\"properties\":{\"query\":{\"type\":\"string\"}}}}}`."
+    },
+    "latest_data_json": {
+      "type": "string",
+      "description": "Optional JSON object seeding initial slot payloads, e.g. `{\"main\":{\"items\":[]}}`."
+    },
+    "file_path": {
+      "type": "string",
+      "description": "Relative file path inside the widget workspace for `read_file` or `write_file`."
+    },
+    "file_content": {
+      "type": "string",
+      "description": "UTF-8 text written by `write_file`."
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+来源：[`packages/extensions/tool-blueprint/src/index.ts`](../packages/extensions/tool-blueprint/src/index.ts)
+
+公开 Kimi Work 四元蓝图工具（`Widget`、`Canvas`、`Binding`、`AutomationCreate`、`AutomationUpdate`、`AutomationControl`）。

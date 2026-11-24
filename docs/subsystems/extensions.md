@@ -12,6 +12,309 @@ The extensions subsystem lets an agent define versioned Cordis packages, run the
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxblueprint--blueprintservice"></a>
+
+### `ctx.blueprint` — `BlueprintService`
+
+Durable four-asset Blueprint service (`Widget`, `Canvas`, `Automation`, `Binding`).
+
+```ts cordis-catalog
+/**
+ * Read the current four-asset Blueprint catalog snapshot.
+ * @returns Detached catalog of Widgets, Canvases, Automations, and Bindings.
+ */
+@Remote('catalog') catalog(): Promise<BlueprintCatalogSnapshot>
+
+/**
+ * Create or replace a Widget and write its `index.html` and optional companion files.
+ * @param input - Widget creation payload.
+ * @returns Stored Widget detail including assembled sandboxed HTML.
+ */
+async createWidget(input: CreateWidgetInput): Promise<BlueprintWidgetDetail>
+
+/**
+ * Update an existing Widget's manifest, HTML, files, or slot data.
+ * @param input - Partial Widget update payload.
+ * @returns Updated Widget detail.
+ */
+async updateWidget(input: UpdateWidgetInput): Promise<BlueprintWidgetDetail>
+
+/**
+ * Read one Widget including its assembled sandboxed HTML.
+ * @param id - Widget identifier.
+ * @returns Widget detail.
+ */
+@Remote('getWidget') async getWidget(id: string): Promise<BlueprintWidgetDetail>
+
+/**
+ * List all stored Widgets without loading their HTML bodies.
+ * @returns Stored Widget manifests ordered by most recent update.
+ */
+listWidgets(): BlueprintWidgetRecord[]
+
+/**
+ * Validate a Widget's HTML structure and metadata.
+ * @param id - Widget identifier.
+ * @returns Validation diagnostics.
+ */
+async validateWidget(id: string): Promise<BlueprintValidationResult>
+
+/**
+ * Delete a Widget, remove its placements from Canvases, and remove attached Bindings.
+ * @param id - Widget identifier.
+ */
+async deleteWidget(id: string): Promise<void>
+
+/**
+ * Read a file inside a Widget's workspace directory.
+ * @param id - Widget identifier.
+ * @param relativePath - Relative path inside the widget workspace.
+ * @returns UTF-8 file text.
+ */
+async readWidgetFile(id: string, relativePath: string): Promise<string>
+
+/**
+ * Write a file inside a Widget's workspace directory.
+ * @param id - Widget identifier.
+ * @param relativePath - Relative path inside the widget workspace.
+ * @param content - UTF-8 file text.
+ */
+async writeWidgetFile(id: string, relativePath: string, content: string): Promise<void>
+
+/**
+ * Persist interactive form/filter input saved by `window.DaimonWidget.saveInput(...)`.
+ * @param request - Widget id and JSON input object.
+ * @returns Updated Widget record.
+ */
+@Remote('saveWidgetInput') async saveWidgetInput( request: { readonly widgetId: string; readonly input: Readonly<Record<string, JsonValue>> }, ): Promise<BlueprintWidgetRecord>
+
+/**
+ * Handle an outbound event emitted by `window.DaimonWidget.emit(event, data)`
+ * and trigger any enabled `widget -> automation` bindings.
+ * @param request - Widget id, event name, and JSON payload.
+ * @returns Triggered run records.
+ */
+@Remote('emitWidgetEvent') async emitWidgetEvent( request: { readonly widgetId: string; readonly event: string; readonly data: JsonValue }, ): Promise<readonly BlueprintAutomationRun[]>
+
+/**
+ * Read UTF-8 text from a managed `FileResourceRef` or a Widget's `workspace/<path>`.
+ * Enforces the configured 10 MiB default read cap on `FileResourceRef` reads.
+ * @param request - Target `fileId` or `workspacePath` (`workspace/...`) and optional `maxBytes`.
+ * @returns Decoded UTF-8 text.
+ */
+@Remote('readFileText') async readFileText(request: { readonly widgetId?: string readonly fileId?: string readonly workspacePath?: string readonly maxBytes?: number }): Promise<{ readonly text: string }>
+
+/**
+ * Read base64-encoded bytes from a managed `FileResourceRef` or a Widget's `workspace/<path>`.
+ * Enforces the configured 25 MiB default read cap on `FileResourceRef` reads.
+ * @param request - Target `fileId` or `workspacePath` and optional `maxBytes`.
+ * @returns Base64 byte envelope.
+ */
+@Remote('readFileBytes') async readFileBytes(request: { readonly widgetId?: string readonly fileId?: string readonly workspacePath?: string readonly maxBytes?: number }): Promise<BlueprintFileBytes>
+
+/**
+ * Create a managed `FileResourceRef` from UTF-8 text or base64 bytes (`DaimonWidget.files.write`).
+ * @param request - File name, optional MIME type, encoding (`utf8` | `base64`), and payload string.
+ * @returns Stored `BlueprintFileResourceRef`.
+ */
+@Remote('writeManagedFile') async writeManagedFile(request: { readonly name: string readonly mimeType?: string readonly encoding: 'utf8' | 'base64' readonly data: string readonly source?: BlueprintFileSource }): Promise<BlueprintFileResourceRef>
+
+/**
+ * Write UTF-8 text under a Widget's `workspace/<path>` (`DaimonWidget.files.writeText`).
+ * @param request - Widget id, `workspace/...` path, and UTF-8 contents.
+ * @returns Written workspace path, persistent widget asset URL, and byte count.
+ */
+@Remote('writeWidgetWorkspaceText') async writeWidgetWorkspaceText(request: { readonly widgetId: string readonly path: string readonly contents: string }): Promise<{ readonly path: string; readonly url: string; readonly bytesWritten: number }>
+
+/**
+ * Mint an expiring preview/download URL for a `FileResourceRef` or resolve a Widget `workspace/...` asset URL.
+ * @param request - Target `fileId` or `workspacePath`, owning `widgetId`, and `purpose` (`preview` | `download`).
+ * @returns Resolved relative HTTP URL served by `BlueprintService`.
+ */
+@Remote('createFileResourceUrl') async createFileResourceUrl(request: { readonly widgetId?: string readonly fileId?: string readonly workspacePath?: string readonly purpose?: 'preview' | 'download' }): Promise<{ readonly url: string }>
+
+/**
+ * Read a managed `FileResourceRef` metadata entry by id (for tests and Automation runners).
+ * @param fileId - Managed file identifier.
+ * @returns Stored `BlueprintFileResourceRef`, or `undefined` when absent.
+ */
+getFileResource(fileId: string): BlueprintFileResourceRef | undefined
+
+/**
+ * List all Canvas dashboards ordered by most recent update.
+ * @returns Stored Canvas records.
+ */
+listCanvases(): BlueprintCanvasRecord[]
+
+/**
+ * Read one Canvas dashboard by id.
+ * @param id - Canvas identifier.
+ * @returns Canvas record.
+ */
+getCanvas(id: string): BlueprintCanvasRecord
+
+/**
+ * Create a new Canvas (`看板`) dashboard.
+ * @param input - Canvas title, optional description, and layout mode (`grid` default).
+ * @returns Created Canvas record.
+ */
+@Remote('createCanvas') async createCanvas(input: CreateCanvasInput): Promise<BlueprintCanvasRecord>
+
+/**
+ * Update Canvas metadata or layout mode (`grid` | `free`).
+ * @param input - Canvas update fields.
+ * @returns Updated Canvas record.
+ */
+@Remote('updateCanvas') async updateCanvas(input: UpdateCanvasInput): Promise<BlueprintCanvasRecord>
+
+/**
+ * Place a Widget onto a Canvas dashboard (auto-packing onto the 12-column grid when `rect` is omitted).
+ * @param input - Placement specification.
+ * @returns Updated Canvas record.
+ */
+@Remote('placeWidget') async placeWidget(input: PlaceWidgetInput): Promise<BlueprintCanvasRecord>
+
+/**
+ * Resize or reposition an existing Widget tile on a Canvas dashboard.
+ * @param input - Placement update payload.
+ * @returns Updated Canvas record.
+ */
+@Remote('updatePlacement') async updatePlacement(input: UpdatePlacementInput): Promise<BlueprintCanvasRecord>
+
+/**
+ * Remove a Widget tile from a Canvas dashboard without deleting the Widget itself.
+ * @param request - Canvas id and placement/widget id.
+ * @returns Updated Canvas record.
+ */
+@Remote('removePlacement') async removePlacement(request: { readonly canvasId: string; readonly placementId: string }): Promise<BlueprintCanvasRecord>
+
+/**
+ * Persist Canvas zoom and pan viewport state.
+ * @param request - Canvas id and viewport values.
+ * @returns Updated Canvas record.
+ */
+@Remote('setCanvasViewState') async setCanvasViewState( request: { readonly canvasId: string; readonly viewState: BlueprintCanvasViewState }, ): Promise<BlueprintCanvasRecord>
+
+/**
+ * Delete a Canvas dashboard while keeping its underlying Widgets intact.
+ * @param id - Canvas identifier.
+ * @returns Deletion flag indicating whether the Canvas existed.
+ */
+@Remote('deleteCanvas') async deleteCanvas(id: string): Promise<{ readonly deleted: boolean }>
+
+/**
+ * List all Binding edges.
+ * @returns Stored Binding records.
+ */
+listBindings(): BlueprintBindingRecord[]
+
+/**
+ * Read one Binding edge by id.
+ * @param id - Binding identifier.
+ * @returns Binding record.
+ */
+getBinding(id: string): BlueprintBindingRecord
+
+/**
+ * Create and schema-validate a Binding edge between an Automation and a Widget.
+ * @param input - Binding endpoints (`automation.result -> widget.slot:main` or `widget.event:submit -> automation.input`).
+ * @returns Created Binding record and compatibility diagnostics.
+ */
+async createBinding( input: CreateBindingInput, ): Promise<{ readonly binding: BlueprintBindingRecord; readonly validation: BlueprintValidationResult }>
+
+/**
+ * Validate an existing Binding edge against current Widget and Automation schemas.
+ * @param id - Binding identifier.
+ * @returns Compatibility diagnostics.
+ */
+validateBinding(id: string): BlueprintValidationResult
+
+/**
+ * Delete a Binding edge.
+ * @param id - Binding identifier.
+ */
+async deleteBinding(id: string): Promise<void>
+
+/**
+ * List all Automations ordered by most recent update.
+ * @returns Stored Automation records.
+ */
+listAutomations(): BlueprintAutomationRecord[]
+
+/**
+ * Read one Automation by id.
+ * @param id - Automation identifier.
+ * @returns Automation record.
+ */
+getAutomation(id: string): BlueprintAutomationRecord
+
+/**
+ * Create an Automation (**disabled by default** unless `enabled: true` is explicitly passed).
+ * @param input - Automation creation payload.
+ * @returns Stored Automation record.
+ */
+async createAutomation(input: CreateAutomationInput): Promise<BlueprintAutomationRecord>
+
+/**
+ * Update an existing Automation's trigger, code/prompt, or schemas.
+ * @param input - Automation update fields.
+ * @returns Updated Automation record.
+ */
+async updateAutomation(input: UpdateAutomationInput): Promise<BlueprintAutomationRecord>
+
+/**
+ * Enable or disable an Automation from the Task Card or Task Center UI.
+ * @param request - Automation id and desired enabled flag.
+ * @returns Updated Automation record.
+ */
+@Remote('setAutomationEnabled') async setAutomationEnabled(request: { readonly id: string; readonly enabled: boolean }): Promise<BlueprintAutomationRecord>
+
+/**
+ * Preview which Bindings and Widgets depend on an Automation before deletion.
+ * @param id - Automation identifier.
+ * @returns Attached Binding ids and Widget ids.
+ */
+previewDeleteAutomation(id: string): { readonly bindingIds: readonly string[]; readonly widgetIds: readonly string[] }
+
+/**
+ * Delete an Automation, its workspace directory, and attached Bindings.
+ * @param id - Automation identifier.
+ * @returns Deletion flag indicating whether the Automation existed.
+ */
+@Remote('deleteAutomation') async deleteAutomation(id: string): Promise<{ readonly deleted: boolean }>
+
+/**
+ * List recent runs for one Automation (or all Automations when `automationId` is omitted).
+ * @param automationId - Optional Automation id filter.
+ * @returns Run records ordered newest first.
+ */
+@Remote('listRuns') listRuns(automationId?: string): Promise<readonly BlueprintAutomationRun[]>
+
+/**
+ * Read one Automation run record by id.
+ * @param runId - Run identifier.
+ * @returns Run record.
+ */
+getRun(runId: string): BlueprintAutomationRun
+
+/**
+ * Cancel an in-flight Automation run.
+ * @param runId - Run identifier.
+ * @returns Updated run record.
+ */
+cancelRun(runId: string): BlueprintAutomationRun
+
+/**
+ * Execute an Automation immediately (`Run now` / manual trigger / scheduled tick / widget event)
+ * and push its validated output artifact across all active `automation -> widget` Bindings.
+ * @param request - Automation id, optional input payload, and trigger origin.
+ * @returns Settled Automation run record.
+ */
+@Remote('runAutomation') async runAutomation(request: { readonly id: string readonly input?: JsonValue readonly triggeredBy?: 'manual' | 'schedule' | 'widget_event' }): Promise<BlueprintAutomationRun>
+```
+
+Source: [`packages/extensions/blueprint/src/index.ts`](../../packages/extensions/blueprint/src/index.ts)
+
 <a id="ctxcordisinspect--cordisinspectregistryservice"></a>
 
 ### `ctx.cordisInspect` — `CordisInspectRegistryService`
@@ -278,6 +581,27 @@ publish(topic: string, payload: InspectorJsonValue, monotonicMs?: number): void
 ```
 
 Source: [`packages/experimental/inspector/src/index.ts`](../../packages/experimental/inspector/src/index.ts)
+
+<a id="blueprint-events"></a>
+
+### `blueprint/*` events
+
+<a id="blueprintchanged--emit"></a>
+
+#### `blueprint/changed` — emit
+
+Emitted whenever any Blueprint Widget, Canvas, Automation, or Binding record changes.
+
+```ts cordis-catalog
+/**
+ * Emitted whenever any Blueprint Widget, Canvas, Automation, or Binding record changes.
+ * @param revision - Monotonic catalog revision counter.
+ * @mode emit
+ */
+'blueprint/changed'(revision: number): void
+```
+
+Source: [`packages/extensions/blueprint/src/types.ts`](../../packages/extensions/blueprint/src/types.ts)
 
 <a id="cordis-events"></a>
 

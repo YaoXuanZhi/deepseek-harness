@@ -70,9 +70,16 @@ export function joinProviderDirectory(
       active: true,
     })
   }
-  return rows.toSorted((left, right) =>
-    (left.provider === 'deepseek-account' ? 0 : left.provider === 'deepseek-official' ? 1 : 2)
-      - (right.provider === 'deepseek-account' ? 0 : right.provider === 'deepseek-official' ? 1 : 2))
+  return rows.toSorted((left, right) => {
+    const rank = (id: string): number => id === 'deepseek-account'
+      ? 0
+      : id === 'deepseek-official'
+        ? 1
+        : id === 'kimi-coding' || id === 'moonshotai-cn' || id === 'moonshotai'
+          ? 2
+          : 3
+    return rank(left.provider) - rank(right.provider)
+  })
 }
 
 /** One provider row the page renders. */

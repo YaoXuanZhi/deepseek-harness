@@ -1,0 +1,61 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/subagent/swarm-mode/README.md
+/:
+  en: ad852ba83e9e2c3c
+  zh: 43fcf1f050f47bbb
+/deepseek-ai-dsh-swarm-mode:
+  en: e31ad4e7badd807b
+  zh: 194699d734cbfe2d
+/deepseek-ai-dsh-swarm-mode/summary:
+  en: 2fde57f5a06116eb
+  zh: c2f7a58aa924bc34
+/deepseek-ai-dsh-swarm-mode/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 1db86285abf6c499
+/deepseek-ai-dsh-swarm-mode/use-this-package:
+  en: 6a34f2fcfece8867
+  zh: 200d85ae851a1a39
+/deepseek-ai-dsh-swarm-mode/understand-the-implementation:
+  en: da56d2733ea82e79
+  zh: 3dfff240bf6bb732
+/deepseek-ai-dsh-swarm-mode/further-exploration:
+  en: dcddf9af99cca685
+  zh: bb5704f42e195b81
+/deepseek-ai-dsh-swarm-mode/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-policy-system-prompt:
+  en: c7056564c8befbab
+  zh: c7056564c8befbab
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-policy-system-prompt/what-the-model-sees:
+  en: 3ca2b9f78fa0678e
+  zh: 2154096ec5404212
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-policy-system-prompt/what-the-model-sees/default-swarm-policy:
+  en: 777e7849ac751211
+  zh: 777e7849ac751211
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-policy-system-prompt/token-effect:
+  en: 98fe5d0b836389a6
+  zh: ecbc0cd0e37c7d7e
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-policy-system-prompt/kv-cache-effect:
+  en: a9cd23f39a4699d6
+  zh: 7e96c03f8acd9881
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-batch-tool-schema-and-execution:
+  en: 551f89e2a26b7588
+  zh: 551f89e2a26b7588
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-batch-tool-schema-and-execution/what-the-model-sees:
+  en: faf114e6dab8fff2
+  zh: deeae92dcf637a71
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-batch-tool-schema-and-execution/token-effect:
+  en: b19d6233879b476b
+  zh: 322a7503963dd4a8
+/deepseek-ai-dsh-swarm-mode/model-experience/swarm-batch-tool-schema-and-execution/kv-cache-effect:
+  en: 2a8095e0e2d5eb5b
+  zh: 4207bc967191747e
+/deepseek-ai-dsh-swarm-mode/known-limitations-and-deferred-work:
+  en: d792bf6fdd258c0f
+  zh: dda951d3321bcccc
+/deepseek-ai-dsh-swarm-mode/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

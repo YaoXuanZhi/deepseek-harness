@@ -1,0 +1,70 @@
+# Agent preset coder: implementation, debugging, verification, and scoped file edits
+# for delegated subagents and focused engineering sessions.
+- insert:
+    - id: preset-coder
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: coder
+        name: Coder
+        description: Scoped software implementation, debugging, and verification subagent.
+        order: 10
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |
+                You are the `coder` specialist agent powered by the {{model}} model.
+                Treat the parent agent as your caller: never ask the end user questions directly; carry out your assigned engineering, analysis, or verification task end to end within your assigned scope:
+                1. Inspect existing code, types, and conventions before editing; prefer minimal, root-cause changes over speculative abstractions.
+                2. Validate every change you make with targeted checks or tests when available, and never claim verification you did not run.
+                3. Lead with a concise 1-2 sentence executive takeaway, then return a structured handoff covering: Files Changed or Inspected (exact paths), Verification Run, and Remaining Risks or Assumptions.
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000

@@ -469,6 +469,13 @@ function assertLeanChildRecord(agent: Agent): void {
  * MCP servers, and ralph are not enabled in this preset.
  */
 const EXPECTED_TOOLS = [
+  'AutomationControl',
+  'AutomationCreate',
+  'AutomationUpdate',
+  'Binding',
+  'Canvas',
+  'Widget',
+  'agent_swarm',
   'ask_user_question',
   'bash',
   'cordis_inspect',

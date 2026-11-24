@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Modo enxame",
+    "description": "Coordena subagentes especialistas em paralelo através do modo /swarm e da ferramenta agent_swarm."
+  }
+}

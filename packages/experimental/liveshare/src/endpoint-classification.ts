@@ -240,6 +240,26 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'schedule/list': 'owner-only', // owner schedules
   'schedule/run': 'owner-only', // owner schedules
   'schedule/view': 'owner-only', // owner schedules
+  'blueprint/catalog': 'owner-only', // owner Blueprint catalog
+  'blueprint/createCanvas': 'owner-only', // owner Blueprint dashboards
+  'blueprint/createFileResourceUrl': 'owner-only', // owner Blueprint file resources
+  'blueprint/deleteAutomation': 'owner-only', // owner Blueprint automations
+  'blueprint/deleteCanvas': 'owner-only', // owner Blueprint dashboards
+  'blueprint/emitWidgetEvent': 'owner-only', // owner Blueprint widget events
+  'blueprint/getWidget': 'owner-only', // owner Blueprint widgets
+  'blueprint/listRuns': 'owner-only', // owner Blueprint automation runs
+  'blueprint/placeWidget': 'owner-only', // owner Blueprint dashboards
+  'blueprint/readFileBytes': 'owner-only', // owner Blueprint file resources
+  'blueprint/readFileText': 'owner-only', // owner Blueprint file resources
+  'blueprint/removePlacement': 'owner-only', // owner Blueprint dashboards
+  'blueprint/runAutomation': 'owner-only', // owner Blueprint automations
+  'blueprint/saveWidgetInput': 'owner-only', // owner Blueprint widgets
+  'blueprint/setAutomationEnabled': 'owner-only', // owner Blueprint automations
+  'blueprint/setCanvasViewState': 'owner-only', // owner Blueprint dashboards
+  'blueprint/writeManagedFile': 'owner-only', // owner Blueprint file resources
+  'blueprint/writeWidgetWorkspaceText': 'owner-only', // owner Blueprint widget workspace files
+  'blueprint/updateCanvas': 'owner-only', // owner Blueprint dashboards
+  'blueprint/updatePlacement': 'owner-only', // owner Blueprint dashboards
   'subagents/interruptByUser': 'owner-only', // owner subagents
   'subagents/prompt': 'owner-only', // owner subagents
 

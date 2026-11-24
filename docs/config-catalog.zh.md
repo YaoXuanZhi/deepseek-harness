@@ -510,6 +510,40 @@ export type Config = LocalConfig
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-bash-sandbox -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-blueprint -->
+<a id="deepseek-aidsh-blueprint"></a>
+
+## `@deepseek-ai/dsh-blueprint`
+
+- `source`: [`packages/extensions/blueprint/src/index.ts:80`](../packages/extensions/blueprint/src/index.ts)
+
+```ts config-catalog
+/** Configuration accepted by `BlueprintService`. */
+export interface BlueprintConfig {
+  /** Absolute root directory storing Blueprint state and asset workspaces. */
+  root?: string
+  /** Scheduler polling interval in milliseconds (`0` disables background timer ticks). */
+  schedulerTickMs?: number
+  /** Maximum retained run records per Automation. */
+  maxRunsPerAutomation?: number
+  /** Timeout in milliseconds for a single Python `code` Automation execution. */
+  codeTimeoutMs?: number
+  /** Python executable command used for `type: 'code'` Automations. */
+  pythonCommand?: string
+  /** Maximum byte size accepted for a user-picked file upload (default 250 MiB). */
+  maxUploadBytes?: number
+  /** Maximum byte size accepted for `DaimonWidget.files.readText` on a `FileResourceRef` (default 10 MiB). */
+  maxReadTextBytes?: number
+  /** Maximum byte size accepted for `DaimonWidget.files.readBytes` on a `FileResourceRef` (default 25 MiB). */
+  maxReadBytes?: number
+  /** Maximum byte size accepted for `DaimonWidget.files.write` (default 50 MiB). */
+  maxWriteBytes?: number
+  /** Lifetime in milliseconds for ephemeral resource preview/download URLs (default 15 minutes). */
+  resourceUrlTtlMs?: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-blueprint -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-cli-account -->
 <a id="deepseek-aidsh-cli-account"></a>
 
@@ -3858,6 +3892,23 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-skill-filesystem -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-skill-kimi-work -->
+<a id="deepseek-aidsh-skill-kimi-work"></a>
+
+## `@deepseek-ai/dsh-skill-kimi-work`
+
+- `inject`: `skills`
+- `source`: [`packages/skill/skill-kimi-work/src/index.ts:21`](../packages/skill/skill-kimi-work/src/index.ts)
+
+```ts config-catalog
+/** Configuration accepted by the bundled Kimi Work skill provider. */
+export interface KimiWorkSkillsConfig {
+  /** Absolute directory containing one subdirectory per bundled Kimi Work skill. */
+  assetRoot?: string
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-skill-kimi-work -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-skill-office -->
 <a id="deepseek-aidsh-skill-office"></a>
 
@@ -4288,6 +4339,33 @@ export interface Config {
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-subagent-spawn-in-process -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-swarm-mode -->
+<a id="deepseek-aidsh-swarm-mode"></a>
+
+## `@deepseek-ai/dsh-swarm-mode`
+
+- `inject`: `tools` · `subagents` · `systemPrompt` · `sessionProjections`
+- `source`: [`packages/subagent/swarm-mode/src/index.ts:72`](../packages/subagent/swarm-mode/src/index.ts)
+
+```ts config-catalog
+/** Configuration accepted by `SwarmModeController`. */
+export interface SwarmModeConfig {
+  /** Guidance rendered in `swarm:policy` while Swarm mode is active. */
+  section: string
+  /** Default specialist preset for `spawn` batches. */
+  defaultPreset: string
+  /** Allowed specialist presets selectable by `agent_swarm`. */
+  allowedPresets: string[]
+  /** Maximum parallel subagents accepted in one `agent_swarm` call. */
+  maxItems: number
+  /** Provider name used when `fork` is false. */
+  spawnProvider: string
+  /** Provider name used when `fork` is true. */
+  forkProvider: string
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-swarm-mode -->
 
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-system-prompt -->
 <a id="deepseek-aidsh-system-prompt"></a>
@@ -5611,6 +5689,7 @@ export interface Config {
 | `@deepseek-ai/dsh-client-ui-agent-team` | — | [`packages/client/ui-agent-team/src/index.ts`](../packages/client/ui-agent-team/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-approval` | — | [`packages/client/ui-approval/src/index.ts`](../packages/client/ui-approval/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-attachment` | — | [`packages/client/ui-attachment/src/index.ts`](../packages/client/ui-attachment/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-blueprint` | — | [`packages/client/ui-blueprint/src/index.ts`](../packages/client/ui-blueprint/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-brand-official` | — | [`packages/client/ui-brand-official/src/index.ts`](../packages/client/ui-brand-official/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-chat` | — | [`packages/client/ui-chat/src/index.ts`](../packages/client/ui-chat/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-commands` | — | [`packages/client/ui-commands/src/index.ts`](../packages/client/ui-commands/src/index.ts) |
@@ -5657,6 +5736,7 @@ export interface Config {
 | `@deepseek-ai/dsh-client-ui-sidebar-terminal` | — | [`packages/client/ui-sidebar-terminal/src/index.ts`](../packages/client/ui-sidebar-terminal/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-skill` | — | [`packages/client/ui-skill/src/index.ts`](../packages/client/ui-skill/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-subagent` | — | [`packages/client/ui-subagent/src/index.ts`](../packages/client/ui-subagent/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-swarm` | — | [`packages/client/ui-swarm/src/index.ts`](../packages/client/ui-swarm/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-tool` | — | [`packages/client/ui-tool/src/index.ts`](../packages/client/ui-tool/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-user-questions` | — | [`packages/client/ui-user-questions/src/index.ts`](../packages/client/ui-user-questions/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-workflow-run` | — | [`packages/client/ui-workflow-run/src/index.ts`](../packages/client/ui-workflow-run/src/index.ts) |
@@ -5707,6 +5787,7 @@ export interface Config {
 | `@deepseek-ai/dsh-subprocess-local` | — | [`packages/subprocess/subprocess-local/src/index.ts`](../packages/subprocess/subprocess-local/src/index.ts) |
 | `@deepseek-ai/dsh-subprocess-ssh` | `ssh` | [`packages/ssh/subprocess-ssh/src/index.ts`](../packages/ssh/subprocess-ssh/src/index.ts) |
 | `@deepseek-ai/dsh-terminal` | — | [`packages/terminal/terminal/src/index.ts`](../packages/terminal/terminal/src/index.ts) |
+| `@deepseek-ai/dsh-tool-blueprint` | `tools` · `blueprint` · `systemPrompt` | [`packages/extensions/tool-blueprint/src/index.ts`](../packages/extensions/tool-blueprint/src/index.ts) |
 | `@deepseek-ai/dsh-tool-call-timeout-policy` | `tools` | [`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts) |
 | `@deepseek-ai/dsh-tool-cordis` | `tools` · `cordisInspect` | [`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts) |
 | `@deepseek-ai/dsh-tool-executor-native` | `tools` | [`packages/core/tool-executor-native/src/index.ts`](../packages/core/tool-executor-native/src/index.ts) |

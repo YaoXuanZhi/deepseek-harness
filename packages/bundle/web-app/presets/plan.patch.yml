@@ -1,0 +1,60 @@
+# Agent preset plan: strictly read-only software architect and planner subagent.
+- insert:
+    - id: preset-plan
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: plan
+        name: Plan
+        description: Read-only architecture and implementation planning specialist.
+        order: 12
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |
+                You are the `plan` architecture and implementation planning specialist powered by the {{model}} model.
+                Treat the parent agent as your caller: never ask the end user questions directly; ground architectural trade-offs in repository inspection.
+                You operate strictly read-only: inspect files, search symbols, and read external references, never mutating workspace files.
+                Lead your response with a concise 1-2 sentence executive takeaway, then deliver a decision-complete engineering plan grounded in the actual codebase:
+                1. Goal & invariants preserved.
+                2. Module-by-module design, exact file paths, public interfaces, and data-flow edges.
+                3. Edge cases, failure handling, and migration/compatibility impact.
+                4. Focused verification and test plan.
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          - id: git-context
+            name: '@deepseek-ai/dsh-swarm-mode/git-context'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              write: false
+              edit: false
+              applyPatch: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024

@@ -1,0 +1,40 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/client/ui-swarm/README.md
+/:
+  en: b3d5fa0febf76b14
+  zh: 617f35767c513b9a
+/deepseek-ai-dsh-client-ui-swarm:
+  en: f5d2834899b46dc4
+  zh: 99e0f475df22df0d
+/deepseek-ai-dsh-client-ui-swarm/summary:
+  en: 2aa38729003f75b7
+  zh: ece414404fa1a43f
+/deepseek-ai-dsh-client-ui-swarm/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 1db86285abf6c499
+/deepseek-ai-dsh-client-ui-swarm/use-this-package:
+  en: b33fd1533e99c939
+  zh: 4da77ed725537b56
+/deepseek-ai-dsh-client-ui-swarm/use-this-package/surfaces:
+  en: 218347b6b93c5b89
+  zh: a50ec1141fb73440
+/deepseek-ai-dsh-client-ui-swarm/understand-the-implementation:
+  en: 0f3d858ccb165d01
+  zh: d4e9c0f3eb420d78
+/deepseek-ai-dsh-client-ui-swarm/further-exploration:
+  en: 7c9fb1d2f20989e8
+  zh: d10973ebdcaccfc0
+/deepseek-ai-dsh-client-ui-swarm/model-experience:
+  en: 84053a04857fb069
+  zh: bba056d384e82eec
+/deepseek-ai-dsh-client-ui-swarm/model-experience/kv-cache-effect:
+  en: 74564cc10d80b127
+  zh: 0258ff5c5aa3aeb1
+/deepseek-ai-dsh-client-ui-swarm/known-limitations-and-deferred-work:
+  en: 494bc9a3eec673ed
+  zh: 4a0631cfec6197ef
+/deepseek-ai-dsh-client-ui-swarm/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

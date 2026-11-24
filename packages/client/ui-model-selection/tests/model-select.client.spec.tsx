@@ -10,6 +10,7 @@ import type { ComponentProps } from 'react'
 import type { OwnerOf } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ModelDirectoryState } from '../src/client/directory.ts'
 import { ModelSelect } from '../src/client/ModelSelect.tsx'
+import { clampModelSwitchEffort, orderModelProviders } from '../src/client/provider-order.ts'
 import { en, zh } from '../src/client/locales.ts'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
 import { brandString } from '@deepseek-ai/dsh-brand'
@@ -1153,4 +1154,64 @@ it('dismisses contributed options with focus on the trigger before opening anoth
     expect(document.activeElement).toBe(trigger)
   })
   expect(screen.queryByRole('menu')).toBeNull()
+})
+
+describe('Kimi/Moonshot provider ordering and in-place effort clamping', () => {
+  it('places Kimi and Moonshot providers right after DeepSeek routes while preserving custom order', () => {
+    const ordered = orderModelProviders([
+      { id: 'custom-gateway' },
+      { id: 'moonshotai' },
+      { id: 'deepseek-official' },
+      { id: 'kimi-coding' },
+      { id: 'deepseek-account' },
+      { id: 'moonshotai-cn' },
+    ])
+    expect(ordered.map(entry => entry.id)).toEqual([
+      'deepseek-account',
+      'deepseek-official',
+      'moonshotai',
+      'kimi-coding',
+      'moonshotai-cn',
+      'custom-gateway',
+    ])
+  })
+
+  it('clamps explicit reasoning effort across model switches and preserves supported efforts', async () => {
+    expect(clampModelSwitchEffort('max', undefined)).toBeUndefined()
+    expect(clampModelSwitchEffort('high', { efforts: [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }] })).toBe('high')
+    expect(clampModelSwitchEffort('xhigh', { efforts: [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }], defaultEffort: 'low' })).toBe('low')
+    expect(clampModelSwitchEffort(undefined, { efforts: [{ id: 'low', name: 'Low' }] })).toBeUndefined()
+    expect(clampModelSwitchEffort('xhigh', { efforts: [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }] })).toBe('high')
+    expect(clampModelSwitchEffort('xhigh', { efforts: [{ id: 'low', name: 'Low' }, { id: 'medium', name: 'Medium' }] })).toBe('medium')
+
+    const select = vi.fn(async () => ({ ok: true as const, value: undefined }))
+    const directory = createSnapshotStore(state({
+      current: { provider: 'deepseek-official', model: 'deepseek-v4-flash', reasoningEffort: 'max' },
+      groups: [{
+        id: 'kimi-coding',
+        name: 'Kimi',
+        models: [{
+          id: 'kimi-k2.5',
+          name: 'Kimi K2.5',
+          reasoning: { efforts: [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }], defaultEffort: 'high' },
+        }],
+      }, {
+        id: 'deepseek-official',
+        name: 'DeepSeek',
+        models: [{ id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash', reasoning }],
+      }],
+    }))
+    render(<ModelSelect renderSlot={renderLabel} locked={false} available directory={directory}
+      load={vi.fn()} resolveText={resolveText} select={select} t={t} />)
+    fireEvent.click(screen.getByRole('button', { name: /^选择模型/ }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /^模型/ }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Kimi K2.5' }))
+    await waitFor(() => {
+      expect(select).toHaveBeenCalledWith({
+        provider: 'kimi-coding',
+        model: 'kimi-k2.5',
+        reasoningEffort: 'high',
+      })
+    })
+  })
 })

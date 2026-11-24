@@ -560,6 +560,267 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'blueprint',
+    summary: 'Durable four-asset Blueprint service (`Widget`, `Canvas`, `Automation`, `Binding`).',
+    description: 'Durable four-asset Blueprint service (`Widget`, `Canvas`, `Automation`, `Binding`).',
+    methods: [
+      {
+        signature: 'readonly config: ResolvedBlueprintConfig',
+        description: 'Resolved Blueprint service configuration.',
+        parameters: [],
+      },
+      {
+        signature: '@Remote(\'catalog\') catalog(): Promise<BlueprintCatalogSnapshot>',
+        description: 'Read the current four-asset Blueprint catalog snapshot.',
+        parameters: [],
+        returns: 'Detached catalog of Widgets, Canvases, Automations, and Bindings.',
+      },
+      {
+        signature: 'async createWidget(input: CreateWidgetInput): Promise<BlueprintWidgetDetail>',
+        description: 'Create or replace a Widget and write its `index.html` and optional companion files.',
+        parameters: [{ name: 'input', description: 'Widget creation payload.' }],
+        returns: 'Stored Widget detail including assembled sandboxed HTML.',
+      },
+      {
+        signature: 'async updateWidget(input: UpdateWidgetInput): Promise<BlueprintWidgetDetail>',
+        description: 'Update an existing Widget\'s manifest, HTML, files, or slot data.',
+        parameters: [{ name: 'input', description: 'Partial Widget update payload.' }],
+        returns: 'Updated Widget detail.',
+      },
+      {
+        signature: '@Remote(\'getWidget\') async getWidget(id: string): Promise<BlueprintWidgetDetail>',
+        description: 'Read one Widget including its assembled sandboxed HTML.',
+        parameters: [{ name: 'id', description: 'Widget identifier.' }],
+        returns: 'Widget detail.',
+      },
+      {
+        signature: 'listWidgets(): BlueprintWidgetRecord[]',
+        description: 'List all stored Widgets without loading their HTML bodies.',
+        parameters: [],
+        returns: 'Stored Widget manifests ordered by most recent update.',
+      },
+      {
+        signature: 'async validateWidget(id: string): Promise<BlueprintValidationResult>',
+        description: 'Validate a Widget\'s HTML structure and metadata.',
+        parameters: [{ name: 'id', description: 'Widget identifier.' }],
+        returns: 'Validation diagnostics.',
+      },
+      {
+        signature: 'async deleteWidget(id: string): Promise<void>',
+        description: 'Delete a Widget, remove its placements from Canvases, and remove attached Bindings.',
+        parameters: [{ name: 'id', description: 'Widget identifier.' }],
+      },
+      {
+        signature: 'async readWidgetFile(id: string, relativePath: string): Promise<string>',
+        description: 'Read a file inside a Widget\'s workspace directory.',
+        parameters: [{ name: 'id', description: 'Widget identifier.' }, { name: 'relativePath', description: 'Relative path inside the widget workspace.' }],
+        returns: 'UTF-8 file text.',
+      },
+      {
+        signature: 'async writeWidgetFile(id: string, relativePath: string, content: string): Promise<void>',
+        description: 'Write a file inside a Widget\'s workspace directory.',
+        parameters: [{ name: 'id', description: 'Widget identifier.' }, { name: 'relativePath', description: 'Relative path inside the widget workspace.' }, { name: 'content', description: 'UTF-8 file text.' }],
+      },
+      {
+        signature: '@Remote(\'saveWidgetInput\') async saveWidgetInput( request: { readonly widgetId: string; readonly input: Readonly<Record<string, JsonValue>> }, ): Promise<BlueprintWidgetRecord>',
+        description: 'Persist interactive form/filter input saved by `window.DaimonWidget.saveInput(...)`.',
+        parameters: [{ name: 'request', description: 'Widget id and JSON input object.' }],
+        returns: 'Updated Widget record.',
+      },
+      {
+        signature: '@Remote(\'emitWidgetEvent\') async emitWidgetEvent( request: { readonly widgetId: string; readonly event: string; readonly data: JsonValue }, ): Promise<readonly BlueprintAutomationRun[]>',
+        description: 'Handle an outbound event emitted by `window.DaimonWidget.emit(event, data)` and trigger any enabled `widget -> automation` bindings.',
+        parameters: [{ name: 'request', description: 'Widget id, event name, and JSON payload.' }],
+        returns: 'Triggered run records.',
+      },
+      {
+        signature: '@Remote(\'readFileText\') async readFileText(request: { readonly widgetId?: string readonly fileId?: string readonly workspacePath?: string readonly maxBytes?: number }): Promise<{ readonly text: string }>',
+        description: 'Read UTF-8 text from a managed `FileResourceRef` or a Widget\'s `workspace/<path>`. Enforces the configured 10 MiB default read cap on `FileResourceRef` reads.',
+        parameters: [{ name: 'request', description: 'Target `fileId` or `workspacePath` (`workspace/...`) and optional `maxBytes`.' }],
+        returns: 'Decoded UTF-8 text.',
+      },
+      {
+        signature: '@Remote(\'readFileBytes\') async readFileBytes(request: { readonly widgetId?: string readonly fileId?: string readonly workspacePath?: string readonly maxBytes?: number }): Promise<BlueprintFileBytes>',
+        description: 'Read base64-encoded bytes from a managed `FileResourceRef` or a Widget\'s `workspace/<path>`. Enforces the configured 25 MiB default read cap on `FileResourceRef` reads.',
+        parameters: [{ name: 'request', description: 'Target `fileId` or `workspacePath` and optional `maxBytes`.' }],
+        returns: 'Base64 byte envelope.',
+      },
+      {
+        signature: '@Remote(\'writeManagedFile\') async writeManagedFile(request: { readonly name: string readonly mimeType?: string readonly encoding: \'utf8\' | \'base64\' readonly data: string readonly source?: BlueprintFileSource }): Promise<BlueprintFileResourceRef>',
+        description: 'Create a managed `FileResourceRef` from UTF-8 text or base64 bytes (`DaimonWidget.files.write`).',
+        parameters: [{ name: 'request', description: 'File name, optional MIME type, encoding (`utf8` | `base64`), and payload string.' }],
+        returns: 'Stored `BlueprintFileResourceRef`.',
+      },
+      {
+        signature: '@Remote(\'writeWidgetWorkspaceText\') async writeWidgetWorkspaceText(request: { readonly widgetId: string readonly path: string readonly contents: string }): Promise<{ readonly path: string; readonly url: string; readonly bytesWritten: number }>',
+        description: 'Write UTF-8 text under a Widget\'s `workspace/<path>` (`DaimonWidget.files.writeText`).',
+        parameters: [{ name: 'request', description: 'Widget id, `workspace/...` path, and UTF-8 contents.' }],
+        returns: 'Written workspace path, persistent widget asset URL, and byte count.',
+      },
+      {
+        signature: '@Remote(\'createFileResourceUrl\') async createFileResourceUrl(request: { readonly widgetId?: string readonly fileId?: string readonly workspacePath?: string readonly purpose?: \'preview\' | \'download\' }): Promise<{ readonly url: string }>',
+        description: 'Mint an expiring preview/download URL for a `FileResourceRef` or resolve a Widget `workspace/...` asset URL.',
+        parameters: [{ name: 'request', description: 'Target `fileId` or `workspacePath`, owning `widgetId`, and `purpose` (`preview` | `download`).' }],
+        returns: 'Resolved relative HTTP URL served by `BlueprintService`.',
+      },
+      {
+        signature: 'getFileResource(fileId: string): BlueprintFileResourceRef | undefined',
+        description: 'Read a managed `FileResourceRef` metadata entry by id (for tests and Automation runners).',
+        parameters: [{ name: 'fileId', description: 'Managed file identifier.' }],
+        returns: 'Stored `BlueprintFileResourceRef`, or `undefined` when absent.',
+      },
+      {
+        signature: 'listCanvases(): BlueprintCanvasRecord[]',
+        description: 'List all Canvas dashboards ordered by most recent update.',
+        parameters: [],
+        returns: 'Stored Canvas records.',
+      },
+      {
+        signature: 'getCanvas(id: string): BlueprintCanvasRecord',
+        description: 'Read one Canvas dashboard by id.',
+        parameters: [{ name: 'id', description: 'Canvas identifier.' }],
+        returns: 'Canvas record.',
+      },
+      {
+        signature: '@Remote(\'createCanvas\') async createCanvas(input: CreateCanvasInput): Promise<BlueprintCanvasRecord>',
+        description: 'Create a new Canvas (`看板`) dashboard.',
+        parameters: [{ name: 'input', description: 'Canvas title, optional description, and layout mode (`grid` default).' }],
+        returns: 'Created Canvas record.',
+      },
+      {
+        signature: '@Remote(\'updateCanvas\') async updateCanvas(input: UpdateCanvasInput): Promise<BlueprintCanvasRecord>',
+        description: 'Update Canvas metadata or layout mode (`grid` | `free`).',
+        parameters: [{ name: 'input', description: 'Canvas update fields.' }],
+        returns: 'Updated Canvas record.',
+      },
+      {
+        signature: '@Remote(\'placeWidget\') async placeWidget(input: PlaceWidgetInput): Promise<BlueprintCanvasRecord>',
+        description: 'Place a Widget onto a Canvas dashboard (auto-packing onto the 12-column grid when `rect` is omitted).',
+        parameters: [{ name: 'input', description: 'Placement specification.' }],
+        returns: 'Updated Canvas record.',
+      },
+      {
+        signature: '@Remote(\'updatePlacement\') async updatePlacement(input: UpdatePlacementInput): Promise<BlueprintCanvasRecord>',
+        description: 'Resize or reposition an existing Widget tile on a Canvas dashboard.',
+        parameters: [{ name: 'input', description: 'Placement update payload.' }],
+        returns: 'Updated Canvas record.',
+      },
+      {
+        signature: '@Remote(\'removePlacement\') async removePlacement(request: { readonly canvasId: string; readonly placementId: string }): Promise<BlueprintCanvasRecord>',
+        description: 'Remove a Widget tile from a Canvas dashboard without deleting the Widget itself.',
+        parameters: [{ name: 'request', description: 'Canvas id and placement/widget id.' }],
+        returns: 'Updated Canvas record.',
+      },
+      {
+        signature: '@Remote(\'setCanvasViewState\') async setCanvasViewState( request: { readonly canvasId: string; readonly viewState: BlueprintCanvasViewState }, ): Promise<BlueprintCanvasRecord>',
+        description: 'Persist Canvas zoom and pan viewport state.',
+        parameters: [{ name: 'request', description: 'Canvas id and viewport values.' }],
+        returns: 'Updated Canvas record.',
+      },
+      {
+        signature: '@Remote(\'deleteCanvas\') async deleteCanvas(id: string): Promise<{ readonly deleted: boolean }>',
+        description: 'Delete a Canvas dashboard while keeping its underlying Widgets intact.',
+        parameters: [{ name: 'id', description: 'Canvas identifier.' }],
+        returns: 'Deletion flag indicating whether the Canvas existed.',
+      },
+      {
+        signature: 'listBindings(): BlueprintBindingRecord[]',
+        description: 'List all Binding edges.',
+        parameters: [],
+        returns: 'Stored Binding records.',
+      },
+      {
+        signature: 'getBinding(id: string): BlueprintBindingRecord',
+        description: 'Read one Binding edge by id.',
+        parameters: [{ name: 'id', description: 'Binding identifier.' }],
+        returns: 'Binding record.',
+      },
+      {
+        signature: 'async createBinding( input: CreateBindingInput, ): Promise<{ readonly binding: BlueprintBindingRecord; readonly validation: BlueprintValidationResult }>',
+        description: 'Create and schema-validate a Binding edge between an Automation and a Widget.',
+        parameters: [{ name: 'input', description: 'Binding endpoints (`automation.result -> widget.slot:main` or `widget.event:submit -> automation.input`).' }],
+        returns: 'Created Binding record and compatibility diagnostics.',
+      },
+      {
+        signature: 'validateBinding(id: string): BlueprintValidationResult',
+        description: 'Validate an existing Binding edge against current Widget and Automation schemas.',
+        parameters: [{ name: 'id', description: 'Binding identifier.' }],
+        returns: 'Compatibility diagnostics.',
+      },
+      {
+        signature: 'async deleteBinding(id: string): Promise<void>',
+        description: 'Delete a Binding edge.',
+        parameters: [{ name: 'id', description: 'Binding identifier.' }],
+      },
+      {
+        signature: 'listAutomations(): BlueprintAutomationRecord[]',
+        description: 'List all Automations ordered by most recent update.',
+        parameters: [],
+        returns: 'Stored Automation records.',
+      },
+      {
+        signature: 'getAutomation(id: string): BlueprintAutomationRecord',
+        description: 'Read one Automation by id.',
+        parameters: [{ name: 'id', description: 'Automation identifier.' }],
+        returns: 'Automation record.',
+      },
+      {
+        signature: 'async createAutomation(input: CreateAutomationInput): Promise<BlueprintAutomationRecord>',
+        description: 'Create an Automation (**disabled by default** unless `enabled: true` is explicitly passed).',
+        parameters: [{ name: 'input', description: 'Automation creation payload.' }],
+        returns: 'Stored Automation record.',
+      },
+      {
+        signature: 'async updateAutomation(input: UpdateAutomationInput): Promise<BlueprintAutomationRecord>',
+        description: 'Update an existing Automation\'s trigger, code/prompt, or schemas.',
+        parameters: [{ name: 'input', description: 'Automation update fields.' }],
+        returns: 'Updated Automation record.',
+      },
+      {
+        signature: '@Remote(\'setAutomationEnabled\') async setAutomationEnabled(request: { readonly id: string; readonly enabled: boolean }): Promise<BlueprintAutomationRecord>',
+        description: 'Enable or disable an Automation from the Task Card or Task Center UI.',
+        parameters: [{ name: 'request', description: 'Automation id and desired enabled flag.' }],
+        returns: 'Updated Automation record.',
+      },
+      {
+        signature: 'previewDeleteAutomation(id: string): { readonly bindingIds: readonly string[]; readonly widgetIds: readonly string[] }',
+        description: 'Preview which Bindings and Widgets depend on an Automation before deletion.',
+        parameters: [{ name: 'id', description: 'Automation identifier.' }],
+        returns: 'Attached Binding ids and Widget ids.',
+      },
+      {
+        signature: '@Remote(\'deleteAutomation\') async deleteAutomation(id: string): Promise<{ readonly deleted: boolean }>',
+        description: 'Delete an Automation, its workspace directory, and attached Bindings.',
+        parameters: [{ name: 'id', description: 'Automation identifier.' }],
+        returns: 'Deletion flag indicating whether the Automation existed.',
+      },
+      {
+        signature: '@Remote(\'listRuns\') listRuns(automationId?: string): Promise<readonly BlueprintAutomationRun[]>',
+        description: 'List recent runs for one Automation (or all Automations when `automationId` is omitted).',
+        parameters: [{ name: 'automationId', description: 'Optional Automation id filter.' }],
+        returns: 'Run records ordered newest first.',
+      },
+      {
+        signature: 'getRun(runId: string): BlueprintAutomationRun',
+        description: 'Read one Automation run record by id.',
+        parameters: [{ name: 'runId', description: 'Run identifier.' }],
+        returns: 'Run record.',
+      },
+      {
+        signature: 'cancelRun(runId: string): BlueprintAutomationRun',
+        description: 'Cancel an in-flight Automation run.',
+        parameters: [{ name: 'runId', description: 'Run identifier.' }],
+        returns: 'Updated run record.',
+      },
+      {
+        signature: '@Remote(\'runAutomation\') async runAutomation(request: { readonly id: string readonly input?: JsonValue readonly triggeredBy?: \'manual\' | \'schedule\' | \'widget_event\' }): Promise<BlueprintAutomationRun>',
+        description: 'Execute an Automation immediately (`Run now` / manual trigger / scheduled tick / widget event) and push its validated output artifact across all active `automation -> widget` Bindings.',
+        parameters: [{ name: 'request', description: 'Automation id, optional input payload, and trigger origin.' }],
+        returns: 'Settled Automation run record.',
+      },
+    ],
+  },
+  {
     key: 'browserUse',
     summary: 'Owns one optional provider registration in the shared browser-use service.',
     description: 'Owns one optional provider registration in the shared browser-use service.',
@@ -4543,6 +4804,24 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'swarmMode',
+    summary: 'Service owning Swarm mode state, `/swarm` command, prompt guidance, `subagentActivity` live projection, and the `agent_swarm` batch synthesis tool.',
+    description: 'Service owning Swarm mode state, `/swarm` command, prompt guidance, `subagentActivity` live projection, and the `agent_swarm` batch synthesis tool.',
+    methods: [
+      {
+        signature: 'isActive(session: Session): boolean',
+        description: 'Check whether Swarm mode is active for a Session.',
+        parameters: [{ name: 'session', description: 'Session to inspect.' }],
+        returns: 'True when Swarm mode is active.',
+      },
+      {
+        signature: 'setOverride(agent: Agent, active: boolean): void',
+        description: 'Programmatically set an in-memory Swarm mode override for tests or headless callers.',
+        parameters: [{ name: 'agent', description: 'Target agent.' }, { name: 'active', description: 'Desired Swarm mode state.' }],
+      },
+    ],
+  },
+  {
     key: 'systemPrompt',
     summary: 'Registry service for the prompt inputs assembled before each model step.',
     description: 'Registry service for the prompt inputs assembled before each model step.',
@@ -5695,6 +5974,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'key', description: 'the credential record the finished attempt was authorizing.' }, { name: 'settlement', description: 'how it ended, including the `failed` case its caller sees as a thrown error.' }],
   },
   {
+    name: 'blueprint/changed',
+    mode: 'emit',
+    signature: '\'blueprint/changed\'(revision: number): void',
+    summary: 'Emitted whenever any Blueprint Widget, Canvas, Automation, or Binding record changes.',
+    description: 'Emitted whenever any Blueprint Widget, Canvas, Automation, or Binding record changes.',
+    parameters: [{ name: 'revision', description: 'Monotonic catalog revision counter.' }],
+  },
+  {
     name: 'commands/change',
     mode: 'emit',
     signature: '\'commands/change\'(): void',
@@ -6719,6 +7006,118 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type BindingOrigin = \'created\' | \'referenced\' | \'discovered\' | \'tracked\';',
   },
   {
+    name: 'BlueprintAutomationExecution',
+    declaration: 'export type BlueprintAutomationExecution = {\n    readonly type: \'code\';\n    readonly entryFile?: string;\n    readonly entryFunction?: string;\n    readonly code: string;\n} | {\n    readonly type: \'agent\';\n    readonly prompt: string;\n};',
+  },
+  {
+    name: 'BlueprintAutomationId',
+    declaration: 'export type BlueprintAutomationId = Branded<\'BlueprintAutomationId\'>;',
+  },
+  {
+    name: 'BlueprintAutomationRecord',
+    declaration: 'export interface BlueprintAutomationRecord {\n    readonly id: BlueprintAutomationId;\n    readonly title: string;\n    readonly description?: string;\n    readonly enabled: boolean;\n    readonly trigger: BlueprintAutomationTrigger;\n    readonly execution: BlueprintAutomationExecution;\n    readonly inputSchema?: BlueprintJsonSchema;\n    readonly resultSchema?: BlueprintJsonSchema;\n    readonly lastRunId?: BlueprintRunId;\n    readonly lastRunStatus?: \'running\' | \'succeeded\' | \'failed\' | \'cancelled\';\n    readonly lastRunAt?: string;\n    readonly lastError?: string;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'BlueprintAutomationRun',
+    declaration: 'export interface BlueprintAutomationRun {\n    readonly id: BlueprintRunId;\n    readonly automationId: BlueprintAutomationId;\n    readonly status: \'running\' | \'succeeded\' | \'failed\' | \'cancelled\';\n    readonly triggeredBy: \'manual\' | \'schedule\' | \'widget_event\';\n    readonly input?: JsonValue;\n    readonly artifact?: JsonValue;\n    readonly logs: string;\n    readonly error?: string;\n    readonly startedAt: string;\n    readonly finishedAt?: string;\n}',
+  },
+  {
+    name: 'BlueprintAutomationTrigger',
+    declaration: 'export type BlueprintAutomationTrigger = {\n    readonly kind: \'manual\';\n} | {\n    readonly kind: \'schedule\';\n    readonly cron: string;\n    readonly timeZone?: string;\n} | {\n    readonly kind: \'interval\';\n    readonly everyMs: number;\n} | {\n    readonly kind: \'once\';\n    readonly runAt: string;\n} | {\n    readonly kind: \'condition\';\n    readonly expression: string;\n    readonly checkEveryMs?: number;\n};',
+  },
+  {
+    name: 'BlueprintBindingEndpoint',
+    declaration: 'export interface BlueprintBindingEndpoint {\n    readonly kind: \'automation\' | \'widget\';\n    readonly id: string;\n    readonly port: string;\n}',
+  },
+  {
+    name: 'BlueprintBindingId',
+    declaration: 'export type BlueprintBindingId = Branded<\'BlueprintBindingId\'>;',
+  },
+  {
+    name: 'BlueprintBindingRecord',
+    declaration: 'export interface BlueprintBindingRecord {\n    readonly id: BlueprintBindingId;\n    readonly source: BlueprintBindingEndpoint;\n    readonly target: BlueprintBindingEndpoint;\n    readonly enabled: boolean;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'BlueprintCanvasId',
+    declaration: 'export type BlueprintCanvasId = Branded<\'BlueprintCanvasId\'>;',
+  },
+  {
+    name: 'BlueprintCanvasPlacement',
+    declaration: 'export interface BlueprintCanvasPlacement {\n    readonly id: BlueprintPlacementId;\n    readonly widgetId: BlueprintWidgetId;\n    readonly titleOverride?: string;\n    readonly rect: BlueprintGridRect;\n    readonly freeRect?: BlueprintFreeRect;\n    readonly zIndex?: number;\n}',
+  },
+  {
+    name: 'BlueprintCanvasRecord',
+    declaration: 'export interface BlueprintCanvasRecord {\n    readonly id: BlueprintCanvasId;\n    readonly title: string;\n    readonly description?: string;\n    readonly layoutMode: \'grid\' | \'free\';\n    readonly placements: readonly BlueprintCanvasPlacement[];\n    readonly viewState: BlueprintCanvasViewState;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'BlueprintCanvasViewState',
+    declaration: 'export interface BlueprintCanvasViewState {\n    readonly zoom: number;\n    readonly panX: number;\n    readonly panY: number;\n}',
+  },
+  {
+    name: 'BlueprintCatalogSnapshot',
+    declaration: 'export interface BlueprintCatalogSnapshot {\n    readonly revision: number;\n    readonly widgets: readonly BlueprintWidgetRecord[];\n    readonly canvases: readonly BlueprintCanvasRecord[];\n    readonly automations: readonly BlueprintAutomationRecord[];\n    readonly bindings: readonly BlueprintBindingRecord[];\n}',
+  },
+  {
+    name: 'BlueprintFileBytes',
+    declaration: 'export interface BlueprintFileBytes {\n    readonly encoding: \'base64\';\n    readonly data: string;\n    readonly sizeBytes: number;\n    readonly mimeType?: string;\n}',
+  },
+  {
+    name: 'BlueprintFileId',
+    declaration: 'export type BlueprintFileId = Branded<\'BlueprintFileId\'>;',
+  },
+  {
+    name: 'BlueprintFileResourceRef',
+    declaration: 'export interface BlueprintFileResourceRef {\n    readonly kind: \'file\';\n    readonly fileId: BlueprintFileId;\n    readonly name: string;\n    readonly mimeType?: string;\n    readonly sizeBytes: number;\n    readonly sha256?: string;\n    readonly source: BlueprintFileSource;\n    readonly createdAt: string;\n}',
+  },
+  {
+    name: 'BlueprintFileSource',
+    declaration: 'export type BlueprintFileSource = \'user-upload\' | \'widget-output\' | \'automation-output\' | \'imported\';',
+  },
+  {
+    name: 'BlueprintFreeRect',
+    declaration: 'export interface BlueprintFreeRect {\n    readonly x: number;\n    readonly y: number;\n    readonly width: number;\n    readonly height: number;\n}',
+  },
+  {
+    name: 'BlueprintGridRect',
+    declaration: 'export interface BlueprintGridRect {\n    readonly x: number;\n    readonly y: number;\n    readonly w: number;\n    readonly h: number;\n}',
+  },
+  {
+    name: 'BlueprintJsonSchema',
+    declaration: 'export interface BlueprintJsonSchema {\n    readonly type?: \'object\' | \'array\' | \'string\' | \'number\' | \'integer\' | \'boolean\';\n    readonly description?: string;\n    readonly properties?: Readonly<Record<string, BlueprintJsonSchema>>;\n    readonly required?: readonly string[];\n    readonly items?: BlueprintJsonSchema;\n}',
+  },
+  {
+    name: 'BlueprintPlacementId',
+    declaration: 'export type BlueprintPlacementId = Branded<\'BlueprintPlacementId\'>;',
+  },
+  {
+    name: 'BlueprintPortDeclaration',
+    declaration: 'export interface BlueprintPortDeclaration {\n    readonly description?: string;\n    readonly schema?: BlueprintJsonSchema;\n}',
+  },
+  {
+    name: 'BlueprintRunId',
+    declaration: 'export type BlueprintRunId = Branded<\'BlueprintRunId\'>;',
+  },
+  {
+    name: 'BlueprintValidationResult',
+    declaration: 'export interface BlueprintValidationResult {\n    readonly valid: boolean;\n    readonly diagnostics: readonly string[];\n}',
+  },
+  {
+    name: 'BlueprintWidgetDetail',
+    declaration: 'export interface BlueprintWidgetDetail extends BlueprintWidgetRecord {\n    readonly rawHtml: string;\n    readonly assembledHtml: string;\n}',
+  },
+  {
+    name: 'BlueprintWidgetId',
+    declaration: 'export type BlueprintWidgetId = Branded<\'BlueprintWidgetId\'>;',
+  },
+  {
+    name: 'BlueprintWidgetRecord',
+    declaration: 'export interface BlueprintWidgetRecord {\n    readonly id: BlueprintWidgetId;\n    readonly title: string;\n    readonly description?: string;\n    readonly slots: Readonly<Record<string, BlueprintPortDeclaration>>;\n    readonly events: Readonly<Record<string, BlueprintPortDeclaration>>;\n    readonly latestData: Readonly<Record<string, JsonValue>>;\n    readonly savedInput: Readonly<Record<string, JsonValue>>;\n    readonly status: BlueprintWidgetStatus;\n    readonly statusMessage?: string;\n    readonly lastRunAt?: string;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'BlueprintWidgetStatus',
+    declaration: 'export type BlueprintWidgetStatus = \'idle\' | \'running\' | \'error\' | \'degraded\' | \'needs_input\';',
+  },
+  {
     name: 'BoxProps',
     declaration: 'export interface BoxProps {\n    readonly flexDirection?: \'row\' | \'column\' | undefined;\n    readonly paddingX?: number | undefined;\n    readonly paddingY?: number | undefined;\n    readonly padding?: number | undefined;\n    readonly gap?: number | undefined;\n    readonly border?: boolean | string | undefined;\n    readonly borderColor?: string | undefined;\n    readonly children?: UiNode | undefined;\n}',
   },
@@ -7215,6 +7614,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface CreateAgentOptions {\n    readonly sessionId: SessionId;\n    readonly meta?: {\n        readonly cwd?: string;\n        readonly parentSession?: SessionId;\n        readonly isSeeded?: boolean;\n        readonly origin?: \'subagent\';\n        readonly delegationDepth?: number;\n        readonly agentPreset?: string;\n    };\n    readonly inheritedEventCount?: SessionLogOffset;\n    readonly seed?: readonly SessionEvent[];\n    readonly parentSource?: {\n        readonly sessionId: SessionId;\n        readonly endSeq: SessionLogOffset;\n    };\n    readonly agentOptions?: AgentOptions;\n    readonly signal?: AbortSignal;\n    readonly setup?: AgentSetup;\n}',
   },
   {
+    name: 'CreateAutomationInput',
+    declaration: 'export interface CreateAutomationInput {\n    readonly id?: string;\n    readonly title: string;\n    readonly description?: string;\n    readonly enabled?: boolean;\n    readonly trigger?: BlueprintAutomationTrigger;\n    readonly execution: BlueprintAutomationExecution;\n    readonly inputSchema?: BlueprintJsonSchema;\n    readonly resultSchema?: BlueprintJsonSchema;\n}',
+  },
+  {
+    name: 'CreateBindingInput',
+    declaration: 'export interface CreateBindingInput {\n    readonly id?: string;\n    readonly source: BlueprintBindingEndpoint;\n    readonly target: BlueprintBindingEndpoint;\n    readonly enabled?: boolean;\n}',
+  },
+  {
+    name: 'CreateCanvasInput',
+    declaration: 'export interface CreateCanvasInput {\n    readonly id?: string;\n    readonly title: string;\n    readonly description?: string;\n    readonly layoutMode?: \'grid\' | \'free\';\n}',
+  },
+  {
     name: 'CreatedShare',
     declaration: 'export interface CreatedShare {\n    readonly link: string;\n    readonly shareId: string;\n    readonly sessionId: string;\n    readonly sessionIds: readonly string[];\n    readonly sessionMode: \'view\' | \'write\';\n    readonly access: ShareAccess;\n}',
   },
@@ -7241,6 +7652,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'CreateTeamTaskRequest',
     declaration: 'export interface CreateTeamTaskRequest {\n    readonly subject: string;\n    readonly description: string;\n    readonly blockedBy?: readonly TeamTaskId[];\n    readonly writeScopes?: readonly string[];\n}',
+  },
+  {
+    name: 'CreateWidgetInput',
+    declaration: 'export interface CreateWidgetInput {\n    readonly id?: string;\n    readonly title: string;\n    readonly description?: string;\n    readonly html: string;\n    readonly files?: Readonly<Record<string, string>>;\n    readonly slots?: Readonly<Record<string, BlueprintPortDeclaration>>;\n    readonly events?: Readonly<Record<string, BlueprintPortDeclaration>>;\n    readonly latestData?: Readonly<Record<string, JsonValue>>;\n}',
   },
   {
     name: 'CreateWorktreePhase',
@@ -9005,6 +9420,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PiAiRequestHeaderContext',
     declaration: 'export interface PiAiRequestHeaderContext extends Readonly<Pick<GenerateOptions<string>, \'provider\' | \'model\' | \'sessionId\' | \'purpose\'>> {\n    readonly baseURL: string;\n}',
+  },
+  {
+    name: 'PlaceWidgetInput',
+    declaration: 'export interface PlaceWidgetInput {\n    readonly canvasId: string;\n    readonly widgetId: string;\n    readonly titleOverride?: string;\n    readonly rect?: Partial<BlueprintGridRect>;\n    readonly freeRect?: Partial<BlueprintFreeRect>;\n}',
   },
   {
     name: 'PlatformSession',
@@ -11539,8 +11958,20 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type UiRenderResult = UiNode;',
   },
   {
+    name: 'UpdateAutomationInput',
+    declaration: 'export interface UpdateAutomationInput {\n    readonly id: string;\n    readonly title?: string;\n    readonly description?: string;\n    readonly enabled?: boolean;\n    readonly trigger?: BlueprintAutomationTrigger;\n    readonly execution?: BlueprintAutomationExecution;\n    readonly inputSchema?: BlueprintJsonSchema;\n    readonly resultSchema?: BlueprintJsonSchema;\n}',
+  },
+  {
     name: 'UpdateBundleOptions',
     declaration: 'export interface UpdateBundleOptions {\n    readonly registry?: Registry;\n    readonly spec?: string;\n    readonly requestId?: PluginInstallRequestId;\n}',
+  },
+  {
+    name: 'UpdateCanvasInput',
+    declaration: 'export interface UpdateCanvasInput {\n    readonly id: string;\n    readonly title?: string;\n    readonly description?: string;\n    readonly layoutMode?: \'grid\' | \'free\';\n}',
+  },
+  {
+    name: 'UpdatePlacementInput',
+    declaration: 'export interface UpdatePlacementInput {\n    readonly canvasId: string;\n    readonly placementId: string;\n    readonly titleOverride?: string;\n    readonly rect?: Partial<BlueprintGridRect>;\n    readonly freeRect?: Partial<BlueprintFreeRect>;\n}',
   },
   {
     name: 'UpdateSharePermissionsRequest',
@@ -11549,6 +11980,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'UpdateTeamTaskRequest',
     declaration: 'export interface UpdateTeamTaskRequest {\n    readonly taskId: TeamTaskId;\n    readonly expectedRevision: number;\n    readonly action: TeamTaskAction;\n    readonly subject?: string;\n    readonly description?: string;\n    readonly blockedBy?: readonly TeamTaskId[];\n    readonly writeScopes?: readonly string[];\n    readonly owner?: SessionId;\n}',
+  },
+  {
+    name: 'UpdateWidgetInput',
+    declaration: 'export interface UpdateWidgetInput {\n    readonly id: string;\n    readonly title?: string;\n    readonly description?: string;\n    readonly html?: string;\n    readonly files?: Readonly<Record<string, string>>;\n    readonly slots?: Readonly<Record<string, BlueprintPortDeclaration>>;\n    readonly events?: Readonly<Record<string, BlueprintPortDeclaration>>;\n    readonly latestData?: Readonly<Record<string, JsonValue>>;\n    readonly status?: BlueprintWidgetStatus;\n    readonly statusMessage?: string;\n}',
   },
   {
     name: 'UpstreamSkillSelection',

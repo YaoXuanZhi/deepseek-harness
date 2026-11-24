@@ -28,7 +28,7 @@ import { ModelDirectoryResolver } from './service.ts'
 import type { ModelSelectInjected } from './slots.ts'
 import { ModelSelect } from './ModelSelect.tsx'
 import { en, ja, es, fr, de, ru, pt, zh, type ModelKey } from './locales.ts'
-import { orderModelProviders } from './provider-order.ts'
+import { clampModelSwitchEffort, orderModelProviders } from './provider-order.ts'
 
 export { ModelDirectory } from './directory.ts'
 export type { ModelDirectoryState } from './directory.ts'
@@ -89,7 +89,7 @@ function selectionOf(state: ModelDirectoryState, id: string): ModelSelection | u
       const sameRoute = state.current?.provider === group.id && state.current.model === model.id
       const reasoningEffort = sameRoute
         ? state.current?.reasoningEffort ?? model.reasoning?.defaultEffort
-        : model.reasoning?.defaultEffort
+        : clampModelSwitchEffort(state.current?.reasoningEffort, model.reasoning)
       return {
         provider: group.id,
         model: model.id,

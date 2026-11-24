@@ -648,6 +648,32 @@ Types: [Agent](core.md) · [ContentBlock](llm-streaming.md) · [MessageId](llm-s
 
 Source: [`packages/subagent/subagent/src/index.ts`](../../packages/subagent/subagent/src/index.ts)
 
+<a id="ctxswarmmode--swarmmodecontroller"></a>
+
+### `ctx.swarmMode` — `SwarmModeController`
+
+Service owning Swarm mode state, `/swarm` command, prompt guidance, `subagentActivity` live projection, and the `agent_swarm` batch synthesis tool.
+
+```ts cordis-catalog
+/**
+ * Check whether Swarm mode is active for a Session.
+ * @param session - Session to inspect.
+ * @returns True when Swarm mode is active.
+ */
+isActive(session: Session): boolean
+
+/**
+ * Programmatically set an in-memory Swarm mode override for tests or headless callers.
+ * @param agent - Target agent.
+ * @param active - Desired Swarm mode state.
+ */
+setOverride(agent: Agent, active: boolean): void
+```
+
+Types: [Agent](core.md) · [Session](session.md)
+
+Source: [`packages/subagent/swarm-mode/src/index.ts`](../../packages/subagent/swarm-mode/src/index.ts)
+
 <a id="subagent-events"></a>
 
 ### `subagent/*` events

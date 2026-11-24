@@ -39,6 +39,9 @@
       "path": "../../schedule/schedule"
     },
     {
+      "path": "../../extensions/blueprint"
+    },
+    {
       "path": "../../preset/agent-preset-registry"
     },
     {

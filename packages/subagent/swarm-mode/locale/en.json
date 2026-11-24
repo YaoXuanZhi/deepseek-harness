@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Swarm mode",
+    "description": "Coordinate parallel specialist subagents through the /swarm mode and agent_swarm fan-out tool."
+  }
+}

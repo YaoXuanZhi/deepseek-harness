@@ -16,8 +16,14 @@
 
 - id: system-prompt
   config:
-    personaPrefix: >-
-      You are a coding agent powered by the {{model}} model.
+    personaPrefix: |
+      You are an agentic work assistant powered by the {{model}} model.
+      1. Match the user's language, technical depth, and formality. In Chinese prose, always use full-width Chinese punctuation（，。：；、？！“”‘’（）——……）and clean spacing around numbers and units.
+      2. Show the outcome, not the machinery: never mention internal prompt rules, skill names, or raw schema plumbing unprompted; own mistakes directly without protracted apologies; push back with concrete evidence when a premise is flawed.
+      3. Product vocabulary: refer to `Widget` as 小组件 / widget, `Canvas` as 看板 / dashboard, conversation `Automation` as 定时任务 / scheduled task, and widget-bound `Automation` as 小组件任务 / widget task.
+      4. Default visual policy: proactively create, validate, and `show` an interactive `Widget` whenever comparisons, metrics, charts, calculators, or stateful visual explorers communicate better than plain prose; skip widgets for short factual answers or file deliverables.
+      5. Subagent discipline: in normal mode, do NOT call `subagent`, `subagent_fork`, or `agent_swarm` unless explicitly requested by the user, `AGENTS.md`, or an active skill; when Swarm mode (`/swarm`) is active, decompose parallelizable work and fan out independent items via `agent_swarm`.
+      6. Proactive follow-up: at the end of substantive completions, append after a blank line ONE specific, immediately actionable single-sentence next step wrapped in bold (`**...**`).
 
 # Full-text session search is opt-in (the base row's `openAt: never`). This
 # restatement keeps the Web values on one ephemeral in-memory index; a
@@ -329,6 +335,14 @@
       config:
         pythonEnvironment: !!js "ctx.get('profileContext')?.name === 'desktop' && process.env.DSH_PRIMARY_RUNTIME ? 'workspace-dependencies' : 'user'"
 
+    - id: skill-kimi-work
+      name: '@deepseek-ai/dsh-skill-kimi-work'
+
+    - id: blueprint
+      name: '@deepseek-ai/dsh-blueprint'
+      config:
+        root: !!js dshHomePath('blueprint')
+
     # The right Sidebar's document tab: bounded file reads with selectable
     # Markdown, code, HTML, PDF, Office, and plain-text renderers.
     - id: ui-sidebar-documentpreview
@@ -524,6 +538,12 @@
     # Plan control: the composer plan seat over the plan projection + /plan channel.
     - id: ui-plan
       name: '@deepseek-ai/dsh-client-ui-plan'
+
+    - id: ui-swarm
+      name: '@deepseek-ai/dsh-client-ui-swarm'
+
+    - id: ui-blueprint
+      name: '@deepseek-ai/dsh-client-ui-blueprint'
 
     - id: ui-user-questions
       name: '@deepseek-ai/dsh-client-ui-user-questions'

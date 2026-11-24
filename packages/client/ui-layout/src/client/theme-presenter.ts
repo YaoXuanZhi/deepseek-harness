@@ -44,6 +44,17 @@ const FONT_FAMILY_VARIABLES = {
   terminal: '--dsh-font-family-terminal',
 } as const satisfies Record<FontRole, string>
 
+/** Root attribute marking an active circular ViewTransition palette switch. */
+export const THEME_TRANSITION_ATTRIBUTE = 'data-dsh-theme-transition'
+
+const THEME_SWITCH_X = '--dsh-theme-switch-x'
+const THEME_SWITCH_Y = '--dsh-theme-switch-y'
+const THEME_SWITCH_R = '--dsh-theme-switch-r'
+
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (update: () => void) => { finished: Promise<unknown> }
+}
+
 /** Applies theme snapshots to the document; one instance per plugin fiber. */
 export class ThemePresenter {
   /** Token names this presenter wrote in the last apply (its retraction set). */
@@ -51,6 +62,11 @@ export class ThemePresenter {
   /** The single metadata node this presenter inserts and removes. */
   private readonly themeColorMeta: HTMLMetaElement
   private styleObserver: MutationObserver | undefined
+  private appliedScheme: 'light' | 'dark' | undefined
+  private lastPointer: { x: number; y: number } | undefined
+  private readonly onPointerDown = (event: PointerEvent): void => {
+    this.lastPointer = { x: event.clientX, y: event.clientY }
+  }
 
   /** Create the presenter-owned metadata node before the first snapshot arrives. */
   constructor() {
@@ -58,9 +74,10 @@ export class ThemePresenter {
     this.themeColorMeta.name = 'theme-color'
   }
 
-  /** Observe stylesheet installation and replacement after theme initialization. */
+  /** Observe stylesheet installation and pointer coordinates after theme initialization. */
   start(): void {
     if (this.styleObserver !== undefined) return
+    document.addEventListener('pointerdown', this.onPointerDown, { capture: true, passive: true })
     this.styleObserver = new MutationObserver((changes) => {
       const isStyle = (node: Node): boolean => node.nodeName === 'STYLE'
       if (changes.some(change => isStyle(change.target) || change.target.parentNode?.nodeName === 'STYLE'
@@ -73,12 +90,43 @@ export class ThemePresenter {
    * Project a snapshot onto the document: set root `color-scheme` and the body
    * palette attribute from `active.colorScheme` (never the id — `system` is
    * resolved upstream), publish the font sizes and font lists, then replace the
-   * previously applied token variables with `active.tokens`. Browser
-   * theme-color metadata follows the computed body background after those
-   * writes, so the rendered palette remains the color authority.
+   * previously applied token variables with `active.tokens`. When switching
+   * between light and dark interactively with View Transitions enabled, animate
+   * the palette flip from the last pointer origin.
    * @param snapshot - resolved theme snapshot from ctx.theme.
    */
   apply(snapshot: ThemeSnapshot): void {
+    const scheme = snapshot.active.colorScheme
+    const previousScheme = this.appliedScheme
+    this.appliedScheme = scheme
+    const doc = document as ViewTransitionDocument
+    const canTransition = previousScheme !== undefined
+      && previousScheme !== scheme
+      && typeof doc.startViewTransition === 'function'
+      && (typeof matchMedia !== 'function' || matchMedia('(prefers-reduced-motion: no-preference)').matches)
+    if (!canTransition) {
+      this.commit(snapshot)
+      return
+    }
+    const root = document.documentElement
+    const x = this.lastPointer?.x ?? Math.round(window.innerWidth / 2)
+    const y = this.lastPointer?.y ?? Math.round(window.innerHeight / 2)
+    const radius = Math.ceil(Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y)))
+    root.style.setProperty(THEME_SWITCH_X, `${x}px`)
+    root.style.setProperty(THEME_SWITCH_Y, `${y}px`)
+    root.style.setProperty(THEME_SWITCH_R, `${radius}px`)
+    root.setAttribute(THEME_TRANSITION_ATTRIBUTE, '')
+    const clearTransition = (): void => {
+      root.removeAttribute(THEME_TRANSITION_ATTRIBUTE)
+      root.style.removeProperty(THEME_SWITCH_X)
+      root.style.removeProperty(THEME_SWITCH_Y)
+      root.style.removeProperty(THEME_SWITCH_R)
+    }
+    const transition = doc.startViewTransition(() => { this.commit(snapshot) })
+    void transition.finished.then(clearTransition, clearTransition)
+  }
+
+  private commit(snapshot: ThemeSnapshot): void {
     const scheme = snapshot.active.colorScheme
     document.documentElement.style.colorScheme = scheme
     document.documentElement.setAttribute(THEME_SOURCE_ATTRIBUTE,
@@ -113,10 +161,17 @@ export class ThemePresenter {
    * attribute, token variables, the font sizes, font lists, and the owned metadata node.
    */
   dispose(): void {
+    document.removeEventListener('pointerdown', this.onPointerDown, { capture: true })
     this.styleObserver?.disconnect()
     this.styleObserver = undefined
-    document.documentElement.style.removeProperty('color-scheme')
-    document.documentElement.removeAttribute(THEME_SOURCE_ATTRIBUTE)
+    this.appliedScheme = undefined
+    const root = document.documentElement
+    root.style.removeProperty('color-scheme')
+    root.removeAttribute(THEME_SOURCE_ATTRIBUTE)
+    root.removeAttribute(THEME_TRANSITION_ATTRIBUTE)
+    root.style.removeProperty(THEME_SWITCH_X)
+    root.style.removeProperty(THEME_SWITCH_Y)
+    root.style.removeProperty(THEME_SWITCH_R)
     const body = document.body
     body.removeAttribute(DARK_ATTRIBUTE)
     for (const name of Object.values(FONT_SIZE_VARIABLES)) body.style.removeProperty(name)

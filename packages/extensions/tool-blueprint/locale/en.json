@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Blueprint tools",
+    "description": "Expose Widget, Canvas, Binding, and Automation tools to agents."
+  }
+}

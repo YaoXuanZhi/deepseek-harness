@@ -47,6 +47,9 @@
       "path": "../../schedule/schedule"
     },
     {
+      "path": "../../extensions/blueprint"
+    },
+    {
       "path": "../../feedback/message-feedback"
     },
     {

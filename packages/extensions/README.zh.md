@@ -30,6 +30,8 @@ extensions 组为 agent 提供只读运行时 API 发现、供程序和浏览器
 | [`ui-cordis`](ui-cordis/README.zh.md) | 浏览器面板与历史生命周期工具卡片 | client 侧；注册 slot |
 | [`creation-recommendations`](creation-recommendations/README.zh.md) | 针对明确需求创建持续可用、可移除的界面插件 | — |
 | [`plugin-recommendations`](plugin-recommendations/README.zh.md) | 在对话中针对明确需求推荐官方插件 | 提供 `ctx.pluginRecommendations` |
+| [`blueprint`](blueprint/README.zh.md) | 小组件、12 列看板、自动化任务与模式校验绑定的宿主持久化运行时 | 提供 `ctx.blueprint` |
+| [`tool-blueprint`](tool-blueprint/README.zh.md) | 面向模型的 `Widget`、`Canvas`、`Binding` 与 `Automation*` 工具 | 注册到 `ctx.tools` |
 
 -----
 
