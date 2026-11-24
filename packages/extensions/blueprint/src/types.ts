@@ -107,13 +107,16 @@ export interface BlueprintValidationResult {
   readonly diagnostics: readonly string[]
 }
 
-/** 12-column grid rectangle (`x` in `0..11`, `w` in `2..12`, `x + w <= 12`, `h` in `2..33`). */
+/** 12-column grid rectangle (`x` in `0..11`, `w` in `2..12`, `x + w <= 12`, `h` in `2..120`). */
 export interface BlueprintGridRect {
   readonly x: number
   readonly y: number
   readonly w: number
   readonly h: number
 }
+
+/** Vertical sizing mode for a Widget tile placed on a Canvas dashboard. */
+export type BlueprintPlacementHeightMode = 'auto' | 'fill' | 'fixed'
 
 /** Free-layout rectangle in CSS pixels. */
 export interface BlueprintFreeRect {
@@ -130,6 +133,8 @@ export interface BlueprintCanvasPlacement {
   readonly titleOverride?: string
   readonly rect: BlueprintGridRect
   readonly freeRect?: BlueprintFreeRect
+  readonly heightMode?: BlueprintPlacementHeightMode
+  readonly pixelHeight?: number
   readonly zIndex?: number
 }
 
@@ -280,6 +285,8 @@ export interface PlaceWidgetInput {
   readonly titleOverride?: string
   readonly rect?: Partial<BlueprintGridRect>
   readonly freeRect?: Partial<BlueprintFreeRect>
+  readonly heightMode?: BlueprintPlacementHeightMode
+  readonly pixelHeight?: number
 }
 
 /** Request payload for updating a Canvas placement. */
@@ -289,6 +296,9 @@ export interface UpdatePlacementInput {
   readonly titleOverride?: string
   readonly rect?: Partial<BlueprintGridRect>
   readonly freeRect?: Partial<BlueprintFreeRect>
+  readonly heightMode?: BlueprintPlacementHeightMode
+  readonly pixelHeight?: number
+  readonly reflow?: boolean
 }
 
 /** Request payload for creating an Automation (disabled by default unless `enabled: true`). */

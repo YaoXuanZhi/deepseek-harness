@@ -321,7 +321,7 @@ export function apply(ctx: Context): void {
   ctx.tools.register(defineTool({
     name: 'Canvas',
     description:
-      'Create, list, inspect, arrange, and update persistent multi-widget Dashboards (`看板`) on a 12-column grid (`x: 0..11, w: 2..12, h: 2..33`) or free layout.',
+      'Create, list, inspect, arrange, and update persistent multi-widget Dashboards (`看板`) on a 12-column grid (`x: 0..11, w: 2..12, h: 2..120`) or free layout.',
     parameters: {
       action: {
         type: 'string',
@@ -357,7 +357,7 @@ export function apply(ctx: Context): void {
       x: { type: 'number', description: 'Grid column `0..11` (or pixel `x` in free mode).' },
       y: { type: 'number', description: 'Grid row `>= 0` (or pixel `y` in free mode).' },
       w: { type: 'number', description: 'Grid column span `2..12` (`x + w <= 12`).' },
-      h: { type: 'number', description: 'Grid row span `2..33` (`32px` per row unit).' },
+      h: { type: 'number', description: 'Grid row span `2..120` (`36px` per row unit).' },
       zoom: { type: 'number', description: 'Viewport zoom (`0.25..2.5`) for `set_view_state`.' },
       pan_x: { type: 'number', description: 'Viewport pan X for `set_view_state`.' },
       pan_y: { type: 'number', description: 'Viewport pan Y for `set_view_state`.' },

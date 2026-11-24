@@ -13,6 +13,7 @@
 
 import { createElement, type ReactNode } from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { BlueprintGridRect, BlueprintPlacementHeightMode } from '@deepseek-ai/dsh-blueprint/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -63,6 +64,13 @@ declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
   }
 }
 
+/** Layout patch accepted by `updatePlacementLayout` for interactive Dashboard resizing. */
+export interface BlueprintPlacementLayoutPatch {
+  readonly rect?: Partial<BlueprintGridRect> | undefined
+  readonly heightMode?: BlueprintPlacementHeightMode | undefined
+  readonly pixelHeight?: number | undefined
+}
+
 /** Shared injected face across Blueprint tool views, fences, and Dashboard pages. */
 export interface BlueprintViewInjected {
   readonly hooks: {
@@ -78,9 +86,12 @@ export interface BlueprintViewInjected {
   readonly togglePinWindow: (widgetId: string, title: string, fallbackHtml?: string) => Promise<void>
   readonly pinWidgetToDashboard: (widgetId: string, title: string, openAside?: boolean) => Promise<void>
   readonly openDashboardInRight: (canvasId?: string) => void
+  readonly openDashboardInMain: () => void
   readonly createCanvas: (title: string) => Promise<string | undefined>
   readonly placeWidgetOnCanvas: (canvasId: string, widgetId: string) => Promise<void>
   readonly resizePlacementWidth: (canvasId: string, placementId: string, w: number) => Promise<void>
+  readonly updatePlacementLayout: (canvasId: string, placementId: string, patch: BlueprintPlacementLayoutPatch) => Promise<void>
+  readonly setCanvasZoom: (canvasId: string, zoom: number) => Promise<void>
   readonly removePlacementFromCanvas: (canvasId: string, placementId: string) => Promise<void>
   readonly deleteCanvasById: (canvasId: string) => Promise<void>
   readonly setAutomationEnabled: (automationId: string, enabled: boolean) => Promise<void>
@@ -89,15 +100,22 @@ export interface BlueprintViewInjected {
 
 export type { BlueprintMainDashboardProps, BlueprintRightTabProps } from './BlueprintDashboardBoard.tsx'
 export type { BlueprintToolViewProps, BlueprintTurnTailProps, DaimonCanvasFenceProps } from './BlueprintToolViews.tsx'
-export type { BlueprintWidgetFrameProps } from './BlueprintWidgetFrame.tsx'
+export type { BlueprintTileControlsProps, BlueprintWidgetFrameProps } from './BlueprintWidgetFrame.tsx'
 export type { BlueprintTurnAutomationItem, BlueprintTurnData, BlueprintTurnWidgetItem } from './turn-blueprint.ts'
 export type { BlueprintFilesDispatcher, WidgetFilesCallOutcome, WidgetFilesHostError } from './widget-files-host.ts'
 export type { WidgetPinController, WidgetPinControllerDeps } from './widget-pin-host.ts'
 
-function DashboardsNavIcon(): ReactNode {
+function DashboardsNavIcon(props: { readonly className?: string | undefined }): ReactNode {
   return createElement(
     'svg',
-    { width: '16', height: '16', viewBox: '0 0 18 18', fill: 'none', 'aria-hidden': 'true' },
+    {
+      width: '16',
+      height: '16',
+      viewBox: '0 0 18 18',
+      fill: 'none',
+      'aria-hidden': 'true',
+      ...(props.className === undefined ? {} : { className: props.className }),
+    },
     createElement('rect', { x: '2.2', y: '2.2', width: '6', height: '6', rx: '1.5', stroke: 'currentColor', strokeWidth: '1.4' }),
     createElement('rect', { x: '9.8', y: '2.2', width: '6', height: '3.8', rx: '1.3', stroke: 'currentColor', strokeWidth: '1.4' }),
     createElement('rect', { x: '9.8', y: '7.6', width: '6', height: '8.2', rx: '1.5', stroke: 'currentColor', strokeWidth: '1.4' }),
@@ -163,6 +181,10 @@ export function apply(ctx: ClientContext): void {
     }
   }
 
+  const openDashboardInMain = (): void => {
+    ctx.layout.selectPanel(DASHBOARDS_PANEL_ID)
+  }
+
   const saveWidgetInput = (widgetId: string, input: Readonly<Record<string, JsonValue>>): void => {
     void ctx.remote.blueprint.saveWidgetInput({ widgetId, input }).then(() => controller.refresh(), () => {})
   }
@@ -200,7 +222,30 @@ export function apply(ctx: ClientContext): void {
     kind: BLUEPRINT_DASHBOARD_TAB_KIND,
     priority: 'builtin',
     title: () => t('tab.dashboard'),
+    guide: [{
+      id: 'dashboard',
+      order: 30,
+      title: () => t('tab.dashboard'),
+      description: () => t('canvas.subtitle'),
+      icon: DashboardsNavIcon,
+    }],
   }), 'ui-blueprint: right tab definition')
+
+  const updatePlacementLayout = async (
+    canvasId: string,
+    placementId: string,
+    patch: BlueprintPlacementLayoutPatch,
+  ): Promise<void> => {
+    await ctx.remote.blueprint.updatePlacement({
+      canvasId,
+      placementId,
+      ...(patch.rect === undefined ? {} : { rect: patch.rect }),
+      ...(patch.heightMode === undefined ? {} : { heightMode: patch.heightMode }),
+      ...(patch.pixelHeight === undefined ? {} : { pixelHeight: patch.pixelHeight }),
+      reflow: true,
+    }).catch(() => {})
+    await controller.refresh()
+  }
 
   const buildInjected = (): BlueprintViewInjected => ({
     hooks: {
@@ -228,6 +273,8 @@ export function apply(ctx: ClientContext): void {
           canvasId: targetCanvasId,
           widgetId,
           titleOverride: title,
+          rect: { w: 12, h: 12 },
+          heightMode: 'auto',
         }).catch(() => {})
         await controller.refresh()
         if (openAside) {
@@ -236,17 +283,35 @@ export function apply(ctx: ClientContext): void {
       }
     },
     openDashboardInRight,
+    openDashboardInMain,
     createCanvas: async (title) => {
       const res = await ctx.remote.blueprint.createCanvas({ title })
       await controller.refresh()
       return res.ok ? res.value.id : undefined
     },
     placeWidgetOnCanvas: async (canvasId, widgetId) => {
-      await ctx.remote.blueprint.placeWidget({ canvasId, widgetId }).catch(() => {})
+      await ctx.remote.blueprint.placeWidget({
+        canvasId,
+        widgetId,
+        rect: { w: 12, h: 12 },
+        heightMode: 'auto',
+      }).catch(() => {})
       await controller.refresh()
     },
     resizePlacementWidth: async (canvasId, placementId, w) => {
-      await ctx.remote.blueprint.updatePlacement({ canvasId, placementId, rect: { x: 0, w } }).catch(() => {})
+      await updatePlacementLayout(canvasId, placementId, { rect: { w } })
+    },
+    updatePlacementLayout,
+    setCanvasZoom: async (canvasId, zoom) => {
+      const current = controller.source.getSnapshot().catalog.canvases.find(c => c.id === canvasId)?.viewState
+      await ctx.remote.blueprint.setCanvasViewState({
+        canvasId,
+        viewState: {
+          zoom,
+          panX: current?.panX ?? 0,
+          panY: current?.panY ?? 0,
+        },
+      }).catch(() => {})
       await controller.refresh()
     },
     removePlacementFromCanvas: async (canvasId, placementId) => {

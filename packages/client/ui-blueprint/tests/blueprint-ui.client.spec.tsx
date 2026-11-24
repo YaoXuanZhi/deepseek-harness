@@ -11,7 +11,12 @@ import {
   type BlueprintTurnTailProps,
   type DaimonCanvasFenceProps,
 } from '../src/client/BlueprintToolViews.tsx'
-import { BlueprintMainDashboardPage, type BlueprintMainDashboardProps } from '../src/client/BlueprintDashboardBoard.tsx'
+import {
+  BlueprintMainDashboardPage,
+  BlueprintRightDashboardTab,
+  type BlueprintMainDashboardProps,
+  type BlueprintRightTabProps,
+} from '../src/client/BlueprintDashboardBoard.tsx'
 import { zh, type BlueprintLocaleKey } from '../src/client/locales.ts'
 import { blueprintTurnCardsDefinition } from '../src/client/turn-blueprint.ts'
 import { createBlueprintFilesDispatcher } from '../src/client/widget-files-host.ts'
@@ -162,7 +167,7 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
     await waitFor(() => { expect(runAutomationNow).toHaveBeenCalledWith('morning-task') })
   })
 
-  it('renders daimon-canvas Markdown fence card and 12-column Dashboard board', () => {
+  it('renders daimon-canvas Markdown fence card and 12-column Dashboard board', async () => {
     const openDashboardInRight = vi.fn()
     const stateWithBoard: BlueprintClientState = {
       loaded: true,
@@ -216,6 +221,101 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
     expect(openDashboardInRight).toHaveBeenCalledWith('board-1')
 
     cleanup()
+    const updatePlacementLayout = vi.fn().mockResolvedValue(undefined)
+    const setCanvasZoom = vi.fn().mockResolvedValue(undefined)
+    const openDashboardInMain = vi.fn()
+    const stateWithDetail: BlueprintClientState = {
+      ...stateWithBoard,
+      widgetDetails: {
+        w1: {
+          id: 'w1' as never,
+          title: '核心指标卡',
+          slots: {},
+          events: {},
+          latestData: {},
+          savedInput: {},
+          status: 'idle',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+          rawHtml: '<div>Tall Overview</div>',
+          assembledHtml: '<!DOCTYPE html><html><body><div>Tall Overview</div></body></html>',
+        },
+      },
+    }
+
+    render(
+      <BlueprintRightDashboardTab
+        {...({
+          useTabInfo: (() => ({ tab: { id: 't1', kind: 'blueprintDashboard', navigation: { params: { canvasId: 'board-1' } } } })) as never,
+          useBlueprintState: (sel: (s: BlueprintClientState) => unknown) => sel(stateWithDetail),
+          useBlueprintTheme: (sel: (th: 'light' | 'dark') => unknown) => sel('light'),
+          usePinnedWidgetIds: (sel: (ids: readonly string[]) => unknown) => sel([]),
+          localeCode: 'zh-CN',
+          ensureWidget: () => { },
+          saveWidgetInput: () => { },
+          emitWidgetEvent: () => { },
+          handleWidgetFilesCall: vi.fn(),
+          togglePinWindow: vi.fn(),
+          openDashboardInMain,
+          createCanvas: async () => undefined,
+          placeWidgetOnCanvas: async () => { },
+          resizePlacementWidth: async () => { },
+          updatePlacementLayout,
+          setCanvasZoom,
+          removePlacementFromCanvas: async () => { },
+          deleteCanvasById: async () => { },
+          t: makeT(),
+        } as Partial<BlueprintRightTabProps> as BlueprintRightTabProps)}
+      />,
+    )
+
+    expect(screen.getAllByText('核心指标卡').length).toBeGreaterThanOrEqual(2)
+    const boardIframe = screen.getByTitle('核心指标卡') as HTMLIFrameElement
+
+    // Auto-fit tall widget height beyond 720px without clipping in Right Sidebar
+    window.dispatchEvent(new MessageEvent('message', {
+      source: boardIframe.contentWindow,
+      data: {
+        channel: 'daimon-widget',
+        widgetId: 'w1',
+        type: 'resize',
+        payload: { height: 960 },
+      },
+    }))
+    await waitFor(() => {
+      expect(boardIframe.parentElement?.style.height).toBe('960px')
+    })
+
+    // Toggle Fill panel, Toggle Width, Zoom In, and Open Full Page
+    fireEvent.click(screen.getByRole('button', { name: '铺满面板' }))
+    expect(updatePlacementLayout).toHaveBeenCalledWith('board-1', 'tile-1', { heightMode: 'fill' })
+
+    fireEvent.click(screen.getByRole('button', { name: '通栏（12 列）' }))
+    expect(updatePlacementLayout).toHaveBeenCalledWith('board-1', 'tile-1', { rect: { w: 12 } })
+
+    fireEvent.click(screen.getByRole('button', { name: '放大显示比例' }))
+    expect(setCanvasZoom).toHaveBeenCalledWith('board-1', 1.1)
+
+    fireEvent.click(screen.getByRole('button', { name: '全屏看板页' }))
+    expect(openDashboardInMain).toHaveBeenCalledTimes(1)
+
+    // Interactive bottom drag resize + double-click reset to auto height
+    const separators = screen.getAllByRole('separator', { name: /拖拽调节显示区域/ })
+    const bottomHandle = separators[0]
+    if (!bottomHandle) throw new Error('Expected bottom resize handle')
+    fireEvent.pointerDown(bottomHandle, { button: 0, pointerId: 7, clientX: 200, clientY: 300 })
+    fireEvent.pointerMove(bottomHandle, { pointerId: 7, clientX: 200, clientY: 480 })
+    fireEvent.pointerUp(bottomHandle, { pointerId: 7, clientX: 200, clientY: 480 })
+    expect(updatePlacementLayout).toHaveBeenCalledWith(
+      'board-1',
+      'tile-1',
+      expect.objectContaining({ heightMode: 'fixed' }),
+    )
+
+    fireEvent.doubleClick(bottomHandle)
+    expect(updatePlacementLayout).toHaveBeenCalledWith('board-1', 'tile-1', { heightMode: 'auto' })
+
+    cleanup()
     render(
       <BlueprintMainDashboardPage
         {...({
@@ -228,9 +328,12 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
           emitWidgetEvent: () => { },
           handleWidgetFilesCall: vi.fn(),
           togglePinWindow: vi.fn(),
+          openDashboardInMain: () => { },
           createCanvas: async () => undefined,
           placeWidgetOnCanvas: async () => { },
           resizePlacementWidth: async () => { },
+          updatePlacementLayout: async () => { },
+          setCanvasZoom: async () => { },
           removePlacementFromCanvas: async () => { },
           deleteCanvasById: async () => { },
           t: makeT(),
@@ -319,14 +422,14 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
           useBlueprintTheme: (sel: (th: 'light' | 'dark') => unknown) => sel('light'),
           usePinnedWidgetIds: (sel: (ids: readonly string[]) => unknown) => sel(['calc-1']),
           localeCode: 'zh-CN',
-          ensureWidget: () => {},
-          saveWidgetInput: () => {},
-          emitWidgetEvent: () => {},
+          ensureWidget: () => { },
+          saveWidgetInput: () => { },
+          emitWidgetEvent: () => { },
           handleWidgetFilesCall: vi.fn(),
           togglePinWindow: vi.fn(),
-          pinWidgetToDashboard: async () => {},
-          setAutomationEnabled: async () => {},
-          runAutomationNow: async () => {},
+          pinWidgetToDashboard: async () => { },
+          setAutomationEnabled: async () => { },
+          runAutomationNow: async () => { },
           t: makeT(),
         } as Partial<BlueprintTurnTailProps> as BlueprintTurnTailProps)}
       />,
@@ -420,8 +523,8 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
       }),
       ensureWidget: async () => undefined,
       onSaveInput,
-      onEmitEvent: () => {},
-      onOpenCanvas: () => {},
+      onEmitEvent: () => { },
+      onOpenCanvas: () => { },
       filesDispatcher: dispatcher,
     })
 

@@ -1,11 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
 import clsx from 'clsx'
-import type { BlueprintWidgetDetail, BlueprintWidgetStatus } from '@deepseek-ai/dsh-blueprint/client'
+import type {
+  BlueprintPlacementHeightMode,
+  BlueprintWidgetDetail,
+  BlueprintWidgetStatus,
+} from '@deepseek-ai/dsh-blueprint/client'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { BlueprintLocaleKey } from './locales.ts'
 import type { WidgetFilesCallOutcome } from './widget-files-host.ts'
 import css from './BlueprintWidgetFrame.module.css'
+
+/** Action callbacks and state for a Widget tile placed on a Dashboard (`看板`). */
+export interface BlueprintTileControlsProps {
+  readonly heightMode: BlueprintPlacementHeightMode
+  readonly isFullWidth: boolean
+  readonly showWidthToggle?: boolean | undefined
+  readonly onToggleHeightMode: () => void
+  readonly onToggleWidth: () => void
+  readonly onRemoveTile: () => void
+}
 
 /** Props accepted by the sandboxed `BlueprintWidgetFrame` host component. */
 export interface BlueprintWidgetFrameProps {
@@ -17,8 +30,14 @@ export interface BlueprintWidgetFrameProps {
   readonly theme: 'light' | 'dark'
   readonly locale: string
   readonly fillHeight?: boolean | undefined
+  readonly explicitHeight?: number | undefined
+  readonly minAutoHeight?: number | undefined
+  readonly maxAutoHeight?: number | undefined
+  readonly contentZoom?: number | undefined
+  readonly interacting?: boolean | undefined
   readonly isPinned?: boolean | undefined
-  readonly extraActions?: ReactNode
+  readonly tileControls?: BlueprintTileControlsProps | undefined
+  readonly onMeasuredHeight?: ((height: number) => void) | undefined
   readonly onEnsureDetail: (widgetId: string) => void
   readonly onSaveInput: (widgetId: string, input: Readonly<Record<string, JsonValue>>) => void
   readonly onEmitEvent: (widgetId: string, event: string, data: JsonValue) => void
@@ -29,8 +48,8 @@ export interface BlueprintWidgetFrameProps {
   readonly t: (key: BlueprintLocaleKey, params?: Record<string, string | number>) => string
 }
 
-const INLINE_MIN_HEIGHT = 180
-const INLINE_MAX_HEIGHT = 720
+const DEFAULT_MIN_HEIGHT = 180
+const DEFAULT_MAX_HEIGHT = 720
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -39,6 +58,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Sandboxed `<iframe sandbox="allow-scripts">` rendering a Blueprint Widget with
  * live `window.DaimonWidget` / `window.DaimonCanvas` `postMessage` synchronization.
+ * @param props - Widget metadata, sizing controls, host callbacks, and localized copy.
+ * @returns Rendered Widget card element.
  */
 export function BlueprintWidgetFrame({
   widgetId,
@@ -49,8 +70,14 @@ export function BlueprintWidgetFrame({
   theme,
   locale,
   fillHeight,
+  explicitHeight,
+  minAutoHeight,
+  maxAutoHeight,
+  contentZoom,
+  interacting,
   isPinned,
-  extraActions,
+  tileControls,
+  onMeasuredHeight,
   onEnsureDetail,
   onSaveInput,
   onEmitEvent,
@@ -61,11 +88,19 @@ export function BlueprintWidgetFrame({
   t,
 }: BlueprintWidgetFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
-  const [measuredHeight, setMeasuredHeight] = useState<number>(300)
+  const measuredCallbackRef = useRef(onMeasuredHeight)
+  measuredCallbackRef.current = onMeasuredHeight
+
+  const minH = minAutoHeight ?? DEFAULT_MIN_HEIGHT
+  const maxH = maxAutoHeight ?? DEFAULT_MAX_HEIGHT
+  const [rawContentHeight, setRawContentHeight] = useState<number>(320)
 
   const html = detail?.assembledHtml ?? fallbackHtml
   const effectiveStatus = detail?.status ?? status ?? 'idle'
   const displayTitle = detail?.title ?? title
+  const zoom = contentZoom !== undefined && Number.isFinite(contentZoom) && contentZoom > 0
+    ? Math.min(1.5, Math.max(0.6, contentZoom))
+    : 1
 
   useEffect(() => {
     if (detail === undefined && widgetId) {
@@ -119,8 +154,9 @@ export function BlueprintWidgetFrame({
       } else if (msg.type === 'resize') {
         const rawH = typeof payload.height === 'number' ? payload.height : 0
         if (rawH > 0) {
-          const clamped = Math.min(INLINE_MAX_HEIGHT, Math.max(INLINE_MIN_HEIGHT, Math.ceil(rawH)))
-          setMeasuredHeight(clamped)
+          const ceilH = Math.ceil(rawH)
+          setRawContentHeight(ceilH)
+          measuredCallbackRef.current?.(ceilH)
         }
       } else if (msg.type === 'saveInput') {
         if (isRecord(payload.input)) {
@@ -171,6 +207,10 @@ export function BlueprintWidgetFrame({
           ? t('widget.status.needsInput')
           : null
 
+  const autoFrameHeight = Math.min(maxH, Math.max(minH, rawContentHeight))
+  const visualAutoHeight = Math.max(minH, Math.ceil(autoFrameHeight * zoom))
+  const isPositioned = fillHeight === true || explicitHeight !== undefined
+
   return (
     <div className={clsx(css.shell, fillHeight && css.shellTile)}>
       <div className={css.toolbar}>
@@ -189,10 +229,28 @@ export function BlueprintWidgetFrame({
           )}
         </div>
         <div className={css.actions}>
-          {onTogglePinWindow !== undefined && (
+          {tileControls !== undefined && (
+            <button
+              type="button"
+              className={clsx(css.actionBtn, tileControls.heightMode === 'fill' && css.actionBtnActive)}
+              onClick={tileControls.onToggleHeightMode}
+            >
+              {tileControls.heightMode === 'auto' ? t('canvas.heightFill') : t('canvas.heightAuto')}
+            </button>
+          )}
+          {tileControls?.showWidthToggle === true && (
             <button
               type="button"
               className={css.actionBtn}
+              onClick={tileControls.onToggleWidth}
+            >
+              {tileControls.isFullWidth ? t('canvas.resizeCompact') : t('canvas.resizeFull')}
+            </button>
+          )}
+          {onTogglePinWindow !== undefined && (
+            <button
+              type="button"
+              className={clsx(css.actionBtn, isPinned && css.actionBtnActive)}
               aria-pressed={isPinned === true}
               onClick={onTogglePinWindow}
             >
@@ -209,18 +267,53 @@ export function BlueprintWidgetFrame({
               {t('widget.openInRight')}
             </button>
           )}
-          {extraActions}
+          {tileControls !== undefined && (
+            <button
+              type="button"
+              className={css.actionBtn}
+              onClick={tileControls.onRemoveTile}
+            >
+              {t('canvas.removeTile')}
+            </button>
+          )}
         </div>
       </div>
       {html !== undefined && html.trim() !== '' ? (
-        <iframe
-          ref={iframeRef}
-          title={displayTitle}
-          sandbox="allow-scripts"
-          srcDoc={html}
-          className={clsx(css.frame, fillHeight && css.frameFill)}
-          style={fillHeight ? undefined : { height: `${String(measuredHeight)}px` }}
-        />
+        <div
+          className={clsx(css.frameViewport, fillHeight && css.frameViewportFill)}
+          style={
+            fillHeight
+              ? undefined
+              : { height: `${String(explicitHeight ?? visualAutoHeight)}px` }
+          }
+        >
+          <iframe
+            ref={iframeRef}
+            title={displayTitle}
+            sandbox="allow-scripts"
+            srcDoc={html}
+            className={clsx(
+              css.frame,
+              isPositioned && css.framePositioned,
+              interacting && css.frameInteracting,
+            )}
+            style={
+              isPositioned
+                ? {
+                  width: zoom === 1 ? '100%' : `${String(100 / zoom)}%`,
+                  height: zoom === 1 ? '100%' : `${String(100 / zoom)}%`,
+                  transform: zoom === 1 ? undefined : `scale(${String(zoom)})`,
+                  transformOrigin: zoom === 1 ? undefined : '0 0',
+                }
+                : {
+                  width: zoom === 1 ? '100%' : `${String(100 / zoom)}%`,
+                  height: `${String(autoFrameHeight)}px`,
+                  transform: zoom === 1 ? undefined : `scale(${String(zoom)})`,
+                  transformOrigin: zoom === 1 ? undefined : '0 0',
+                }
+            }
+          />
+        </div>
       ) : (
         <div className={css.placeholder}>
           {detail === undefined ? t('widget.loading') : t('widget.unavailable')}

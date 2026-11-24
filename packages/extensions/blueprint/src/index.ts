@@ -59,6 +59,7 @@ import type {
 import {
   matchesCronMinute,
   normalizeBlueprintId,
+  reflowCanvasPlacements,
   resolveCanvasGridRect,
   validateBindingCompatibility,
   validateRelativeWorkspacePath,
@@ -1183,12 +1184,19 @@ export class BlueprintService extends TypertRemoteService {
         height: Math.max(180, rect.h * 36),
       })
 
+    const resolvedHeightMode = input.heightMode ?? existingPlacement?.heightMode
+    const resolvedPixelHeight = input.pixelHeight !== undefined
+      ? Math.min(3_200, Math.max(160, Math.round(input.pixelHeight)))
+      : existingPlacement?.pixelHeight
+
     const placement: BlueprintCanvasPlacement = {
       id: placementId,
       widgetId: wid,
       ...(input.titleOverride === undefined ? {} : { titleOverride: input.titleOverride }),
       rect,
       freeRect,
+      ...(resolvedHeightMode === undefined ? {} : { heightMode: resolvedHeightMode }),
+      ...(resolvedPixelHeight === undefined ? {} : { pixelHeight: resolvedPixelHeight }),
       zIndex: existingWithoutSame.length + 1,
     }
     const next: BlueprintCanvasRecord = {
@@ -1215,6 +1223,47 @@ export class BlueprintService extends TypertRemoteService {
     if (!target) throw new RemoteError('blueprint/not-found', `Placement "${input.placementId}" not found`, {})
     const others = canvas.placements.filter(p => p.id !== target.id)
 
+    const nextFree = input.freeRect !== undefined
+      ? {
+        x: input.freeRect.x ?? target.freeRect?.x ?? 0,
+        y: input.freeRect.y ?? target.freeRect?.y ?? 0,
+        width: input.freeRect.width ?? target.freeRect?.width ?? 420,
+        height: input.freeRect.height ?? target.freeRect?.height ?? 320,
+      }
+      : target.freeRect
+
+    const nextHeightMode = input.heightMode ?? target.heightMode
+    const nextPixelHeight = input.pixelHeight !== undefined
+      ? Math.min(3_200, Math.max(160, Math.round(input.pixelHeight)))
+      : (input.heightMode === 'auto' || input.heightMode === 'fill' ? undefined : target.pixelHeight)
+
+    if (input.reflow === true) {
+      const requestedRect = {
+        x: input.rect?.x ?? target.rect.x,
+        y: input.rect?.y ?? target.rect.y,
+        w: input.rect?.w ?? target.rect.w,
+        h: input.rect?.h ?? target.rect.h,
+      }
+      const { pixelHeight: _droppedPixelHeight, ...targetWithoutPixel } = target
+      const candidateTile: BlueprintCanvasPlacement = {
+        ...targetWithoutPixel,
+        ...(input.titleOverride !== undefined ? { titleOverride: input.titleOverride } : {}),
+        rect: requestedRect,
+        ...(nextFree === undefined ? {} : { freeRect: nextFree }),
+        ...(nextHeightMode === undefined ? {} : { heightMode: nextHeightMode }),
+        ...(nextPixelHeight === undefined ? {} : { pixelHeight: nextPixelHeight }),
+      }
+      const reflowed = reflowCanvasPlacements(canvas.placements, candidateTile)
+      const next: BlueprintCanvasRecord = {
+        ...canvas,
+        placements: reflowed,
+        updatedAt: new Date().toISOString(),
+      }
+      this.canvases.set(cid, next)
+      await this.persistAndNotify()
+      return next
+    }
+
     let nextRect = target.rect
     if (input.rect !== undefined) {
       try {
@@ -1228,20 +1277,15 @@ export class BlueprintService extends TypertRemoteService {
         throw new RemoteError('blueprint/invalid-argument', err instanceof Error ? err.message : String(err), {})
       }
     }
-    const nextFree = input.freeRect !== undefined
-      ? {
-        x: input.freeRect.x ?? target.freeRect?.x ?? 0,
-        y: input.freeRect.y ?? target.freeRect?.y ?? 0,
-        width: input.freeRect.width ?? target.freeRect?.width ?? 420,
-        height: input.freeRect.height ?? target.freeRect?.height ?? 320,
-      }
-      : target.freeRect
 
+    const { pixelHeight: _oldPixelHeight, ...restTarget } = target
     const updatedTile: BlueprintCanvasPlacement = {
-      ...target,
+      ...restTarget,
       ...(input.titleOverride !== undefined ? { titleOverride: input.titleOverride } : {}),
       rect: nextRect,
       ...(nextFree === undefined ? {} : { freeRect: nextFree }),
+      ...(nextHeightMode === undefined ? {} : { heightMode: nextHeightMode }),
+      ...(nextPixelHeight === undefined ? {} : { pixelHeight: nextPixelHeight }),
     }
     const next: BlueprintCanvasRecord = {
       ...canvas,

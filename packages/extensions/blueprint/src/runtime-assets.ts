@@ -295,16 +295,41 @@ export function assembleWidgetHtml(record: BlueprintWidgetRecord, rawHtml: strin
     }
   }
 
+  function measureNaturalHeight() {
+    if (!document.body) {
+      return document.documentElement ? document.documentElement.scrollHeight : 180;
+    }
+    var bodyRect = document.body.getBoundingClientRect();
+    var maxBottom = bodyRect.height;
+    var children = document.body.children;
+    for (var i = 0; i < children.length; i++) {
+      var r = children[i].getBoundingClientRect();
+      var bottom = r.bottom - bodyRect.top;
+      if (bottom > maxBottom) maxBottom = bottom;
+    }
+    var padBottom = 0;
+    if (typeof getComputedStyle === 'function') {
+      padBottom = parseFloat(getComputedStyle(document.body).paddingBottom || '0') || 0;
+    }
+    var naturalH = Math.max(maxBottom + padBottom, document.body.offsetHeight || 0);
+    var vh = window.innerHeight || 0;
+    var bodyScroll = document.body.scrollHeight || 0;
+    var docScroll = document.documentElement ? (document.documentElement.scrollHeight || 0) : 0;
+    if (bodyScroll > vh + 2) naturalH = Math.max(naturalH, bodyScroll);
+    if (docScroll > vh + 2) naturalH = Math.max(naturalH, docScroll);
+    return Math.max(Math.ceil(naturalH), 140);
+  }
+
+  var lastReportedHeight = 0;
   function measureAndReport(explicitHeight) {
     updateSizeTier();
     var h = typeof explicitHeight === 'number' && explicitHeight > 0
       ? Math.ceil(explicitHeight)
-      : Math.ceil(Math.max(
-          document.body ? document.body.scrollHeight : 0,
-          document.documentElement ? document.documentElement.scrollHeight : 0,
-          120
-        ));
-    post('resize', { height: h });
+      : measureNaturalHeight();
+    if (Math.abs(h - lastReportedHeight) >= 2 || explicitHeight !== undefined) {
+      lastReportedHeight = h;
+      post('resize', { height: h });
+    }
   }
 
   function readToken(name) {
@@ -606,13 +631,26 @@ export function assembleWidgetHtml(record: BlueprintWidgetRecord, rawHtml: strin
     }
   };
 
-  window.addEventListener('resize', updateSizeTier);
+  var rafScheduled = false;
+  function scheduleMeasure() {
+    if (rafScheduled) return;
+    rafScheduled = true;
+    requestAnimationFrame(function () {
+      rafScheduled = false;
+      measureAndReport();
+    });
+  }
+
+  window.addEventListener('resize', scheduleMeasure);
+  document.addEventListener('click', scheduleMeasure, true);
+  document.addEventListener('toggle', scheduleMeasure, true);
   window.addEventListener('load', function () {
     post('ready', { widgetId: state.widgetId });
     measureAndReport();
-    if (typeof ResizeObserver === 'function' && document.body) {
-      var ro = new ResizeObserver(function () { measureAndReport(); });
-      ro.observe(document.body);
+    if (typeof ResizeObserver === 'function') {
+      var ro = new ResizeObserver(function () { scheduleMeasure(); });
+      if (document.body) ro.observe(document.body);
+      if (document.documentElement) ro.observe(document.documentElement);
     }
   });
 })();

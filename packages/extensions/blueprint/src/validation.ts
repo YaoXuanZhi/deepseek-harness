@@ -94,8 +94,11 @@ export function gridRectsOverlap(a: BlueprintGridRect, b: BlueprintGridRect): bo
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 }
 
+/** Maximum row span supported for a Canvas grid tile (`120` rows). */
+export const MAX_CANVAS_GRID_HEIGHT = 120
+
 /**
- * Validate or auto-place a 12-column Canvas grid rectangle (`x: 0..11`, `w: 2..12`, `h: 2..33`).
+ * Validate or auto-place a 12-column Canvas grid rectangle (`x: 0..11`, `w: 2..12`, `h: 2..120`).
  * @param existing - Existing placements on the Canvas (excluding any placement being updated).
  * @param partial - Caller-requested partial rectangle.
  * @returns Validated non-overlapping 12-column grid rectangle.
@@ -109,8 +112,8 @@ export function resolveCanvasGridRect(
   if (!Number.isInteger(w) || w < 2 || w > 12) {
     throw new BlueprintError(`Grid width \`w\` must be an integer between 2 and 12 (received ${String(w)})`, 'BLUEPRINT_INVALID_LAYOUT')
   }
-  if (!Number.isInteger(h) || h < 2 || h > 33) {
-    throw new BlueprintError(`Grid height \`h\` must be an integer between 2 and 33 (received ${String(h)})`, 'BLUEPRINT_INVALID_LAYOUT')
+  if (!Number.isInteger(h) || h < 2 || h > MAX_CANVAS_GRID_HEIGHT) {
+    throw new BlueprintError(`Grid height \`h\` must be an integer between 2 and ${String(MAX_CANVAS_GRID_HEIGHT)} (received ${String(h)})`, 'BLUEPRINT_INVALID_LAYOUT')
   }
   if (partial?.x !== undefined || partial?.y !== undefined) {
     const x = partial.x ?? 0
@@ -137,7 +140,7 @@ export function resolveCanvasGridRect(
   }
 
   // Auto-pack into the first available row/column slot on the 12-column grid
-  for (let y = 0; y < 200; y += 1) {
+  for (let y = 0; y < 400; y += 1) {
     for (let x = 0; x <= 12 - w; x += 1) {
       const candidate: BlueprintGridRect = { x, y, w, h }
       if (!existing.some(item => gridRectsOverlap(candidate, item.rect))) {
@@ -147,6 +150,51 @@ export function resolveCanvasGridRect(
   }
   const maxBottom = existing.reduce((acc, item) => Math.max(acc, item.rect.y + item.rect.h), 0)
   return { x: 0, y: maxBottom, w, h }
+}
+
+/**
+ * Resize or move `target` on a 12-column Canvas while clamping `x` inside `0..(12 - w)`
+ * and pushing any colliding sibling tiles downward so interactive resizing always succeeds.
+ * @param placements - Current Canvas placements in display order.
+ * @param target - Placement being resized or moved, carrying its requested `rect`.
+ * @returns Updated placements in original array order with non-overlapping grid rectangles.
+ */
+export function reflowCanvasPlacements(
+  placements: readonly BlueprintCanvasPlacement[],
+  target: BlueprintCanvasPlacement,
+): BlueprintCanvasPlacement[] {
+  const w = Math.min(12, Math.max(2, Math.round(target.rect.w)))
+  const h = Math.min(MAX_CANVAS_GRID_HEIGHT, Math.max(2, Math.round(target.rect.h)))
+  const x = Math.min(12 - w, Math.max(0, Math.round(target.rect.x)))
+  const y = Math.max(0, Math.round(target.rect.y))
+
+  const settled = new Map<string, BlueprintCanvasPlacement>()
+  const anchoredTarget: BlueprintCanvasPlacement = {
+    ...target,
+    rect: { x, y, w, h },
+  }
+  settled.set(anchoredTarget.id, anchoredTarget)
+
+  const othersByRow = placements
+    .filter(item => item.id !== anchoredTarget.id)
+    .sort((a, b) => (a.rect.y - b.rect.y) || (a.rect.x - b.rect.x))
+
+  for (const item of othersByRow) {
+    const itemW = Math.min(12, Math.max(2, item.rect.w))
+    const itemX = Math.min(12 - itemW, Math.max(0, item.rect.x))
+    let itemY = Math.max(0, item.rect.y)
+    let candidate: BlueprintGridRect = { x: itemX, y: itemY, w: itemW, h: item.rect.h }
+    while ([...settled.values()].some(placed => gridRectsOverlap(candidate, placed.rect))) {
+      const blockingBottom = [...settled.values()]
+        .filter(placed => gridRectsOverlap(candidate, placed.rect))
+        .reduce((maxY, placed) => Math.max(maxY, placed.rect.y + placed.rect.h), itemY + 1)
+      itemY = blockingBottom
+      candidate = { x: itemX, y: itemY, w: itemW, h: item.rect.h }
+    }
+    settled.set(item.id, { ...item, rect: candidate })
+  }
+
+  return placements.map(item => settled.get(item.id) ?? item)
 }
 
 function schemaTypesCompatible(sourceType: string | undefined, targetType: string | undefined): boolean {

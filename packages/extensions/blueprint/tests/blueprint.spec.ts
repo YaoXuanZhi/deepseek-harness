@@ -133,6 +133,30 @@ describe('@deepseek-ai/dsh-blueprint', () => {
       rect: { x: 2, y: 0, w: 6, h: 8 },
     })).rejects.toThrow(/overlaps/)
 
+    const reflowed = await ctx.blueprint.updatePlacement({
+      canvasId: canvas.id,
+      placementId: widget2.id,
+      rect: { w: 12, h: 48 },
+      heightMode: 'fixed',
+      pixelHeight: 920,
+      reflow: true,
+    })
+    const updatedPeer = reflowed.placements.find(p => p.widgetId === widget2.id)
+    const pushedFirst = reflowed.placements.find(p => p.widgetId === widget.id)
+    expect(updatedPeer?.rect).toEqual({ x: 0, y: 0, w: 12, h: 48 })
+    expect(updatedPeer?.heightMode).toBe('fixed')
+    expect(updatedPeer?.pixelHeight).toBe(920)
+    expect(pushedFirst?.rect).toEqual({ x: 0, y: 48, w: 6, h: 8 })
+
+    const resetAuto = await ctx.blueprint.updatePlacement({
+      canvasId: canvas.id,
+      placementId: widget2.id,
+      heightMode: 'auto',
+      reflow: true,
+    })
+    expect(resetAuto.placements.find(p => p.widgetId === widget2.id)?.heightMode).toBe('auto')
+    expect(resetAuto.placements.find(p => p.widgetId === widget2.id)?.pixelHeight).toBeUndefined()
+
     expect(matchesCronMinute('30 9 * * 1-5', new Date('2026-11-24T09:30:00'))).toBe(true)
     expect(matchesCronMinute('30 9 * * 1-5', new Date('2026-11-24T09:31:00'))).toBe(false)
 

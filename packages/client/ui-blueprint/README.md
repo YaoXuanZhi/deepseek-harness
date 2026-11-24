@@ -71,8 +71,8 @@ Interactive Widget and Dashboard actions mutate Host Blueprint storage outside S
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Sandboxed iframe height cap** — inline Chat Widgets auto-size between `180px` and `720px` and scroll internally beyond `720px`.
-- **Single-click width toggle on Dashboards** — Dashboard tiles switch between `6` columns and `12` columns in the UI while arbitrary `(x, y, w, h)` placement remains available through the `Canvas` tool and RPC API.
+- **Sandboxed iframe height cap** — inline Chat Widgets auto-size between `180px` and `720px` (while Dashboard tiles auto-size up to `2600px`, fill the panel, or drag-resize between `180px` and `2600px`).
+- **Grid drag-reordering** — Dashboard tiles support interactive edge/corner resizing (`2..12` columns and pixel height), height mode toggles, and `60%–150%` display zoom; arbitrary `(x, y)` coordinate moves remain driven by the `Canvas` tool and RPC API.
 
 <a id="dev-note"></a>
 ### Dev Note
