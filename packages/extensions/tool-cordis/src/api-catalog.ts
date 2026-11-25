@@ -712,6 +712,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'Updated Canvas record.',
       },
       {
+        signature: '@Remote(\'arrangeCanvas\') async arrangeCanvas(canvasId: string): Promise<BlueprintCanvasRecord>',
+        description: 'Auto-pack all Widget tiles on a Canvas into compact non-overlapping 12-column rows (`自动排列`).',
+        parameters: [{ name: 'canvasId', description: 'Target Canvas identifier.' }],
+        returns: 'Repacked Canvas record.',
+      },
+      {
         signature: '@Remote(\'setCanvasViewState\') async setCanvasViewState( request: { readonly canvasId: string; readonly viewState: BlueprintCanvasViewState }, ): Promise<BlueprintCanvasRecord>',
         description: 'Persist Canvas zoom and pan viewport state.',
         parameters: [{ name: 'request', description: 'Canvas id and viewport values.' }],
@@ -7043,7 +7049,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'BlueprintCanvasPlacement',
-    declaration: 'export interface BlueprintCanvasPlacement {\n    readonly id: BlueprintPlacementId;\n    readonly widgetId: BlueprintWidgetId;\n    readonly titleOverride?: string;\n    readonly rect: BlueprintGridRect;\n    readonly freeRect?: BlueprintFreeRect;\n    readonly zIndex?: number;\n}',
+    declaration: 'export interface BlueprintCanvasPlacement {\n    readonly id: BlueprintPlacementId;\n    readonly widgetId: BlueprintWidgetId;\n    readonly titleOverride?: string;\n    readonly rect: BlueprintGridRect;\n    readonly freeRect?: BlueprintFreeRect;\n    readonly heightMode?: BlueprintPlacementHeightMode;\n    readonly pixelHeight?: number;\n    readonly zIndex?: number;\n}',
   },
   {
     name: 'BlueprintCanvasRecord',
@@ -7084,6 +7090,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'BlueprintJsonSchema',
     declaration: 'export interface BlueprintJsonSchema {\n    readonly type?: \'object\' | \'array\' | \'string\' | \'number\' | \'integer\' | \'boolean\';\n    readonly description?: string;\n    readonly properties?: Readonly<Record<string, BlueprintJsonSchema>>;\n    readonly required?: readonly string[];\n    readonly items?: BlueprintJsonSchema;\n}',
+  },
+  {
+    name: 'BlueprintPlacementHeightMode',
+    declaration: 'export type BlueprintPlacementHeightMode = \'auto\' | \'fill\' | \'fixed\';',
   },
   {
     name: 'BlueprintPlacementId',
@@ -9423,7 +9433,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'PlaceWidgetInput',
-    declaration: 'export interface PlaceWidgetInput {\n    readonly canvasId: string;\n    readonly widgetId: string;\n    readonly titleOverride?: string;\n    readonly rect?: Partial<BlueprintGridRect>;\n    readonly freeRect?: Partial<BlueprintFreeRect>;\n}',
+    declaration: 'export interface PlaceWidgetInput {\n    readonly canvasId: string;\n    readonly widgetId: string;\n    readonly titleOverride?: string;\n    readonly rect?: Partial<BlueprintGridRect>;\n    readonly freeRect?: Partial<BlueprintFreeRect>;\n    readonly heightMode?: BlueprintPlacementHeightMode;\n    readonly pixelHeight?: number;\n}',
   },
   {
     name: 'PlatformSession',
@@ -11971,7 +11981,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'UpdatePlacementInput',
-    declaration: 'export interface UpdatePlacementInput {\n    readonly canvasId: string;\n    readonly placementId: string;\n    readonly titleOverride?: string;\n    readonly rect?: Partial<BlueprintGridRect>;\n    readonly freeRect?: Partial<BlueprintFreeRect>;\n}',
+    declaration: 'export interface UpdatePlacementInput {\n    readonly canvasId: string;\n    readonly placementId: string;\n    readonly titleOverride?: string;\n    readonly rect?: Partial<BlueprintGridRect>;\n    readonly freeRect?: Partial<BlueprintFreeRect>;\n    readonly heightMode?: BlueprintPlacementHeightMode;\n    readonly pixelHeight?: number;\n    readonly reflow?: boolean;\n    readonly interaction?: \'move\' | \'resize\';\n}',
   },
   {
     name: 'UpdateSharePermissionsRequest',

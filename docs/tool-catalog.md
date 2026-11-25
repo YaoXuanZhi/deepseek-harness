@@ -3252,7 +3252,7 @@ Source: [`packages/extensions/tool-blueprint/src/index.ts`](../packages/extensio
 
 ### `Canvas`
 
-Create, list, inspect, arrange, and update persistent multi-widget Dashboards (`看板`) on a 12-column grid (`x: 0..11, w: 2..12, h: 2..33`) or free layout.
+Create, list, inspect, arrange, and update persistent multi-widget Dashboards (`看板`) on a 12-column grid (`x: 0..11, w: 2..12, h: 2..120`) or free layout.
 
 ```json
 {
@@ -3315,7 +3315,7 @@ Create, list, inspect, arrange, and update persistent multi-widget Dashboards (`
     },
     "h": {
       "type": "number",
-      "description": "Grid row span `2..33` (`32px` per row unit)."
+      "description": "Grid row span `2..120` (`36px` per row unit)."
     },
     "zoom": {
       "type": "number",

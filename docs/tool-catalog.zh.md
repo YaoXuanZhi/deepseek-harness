@@ -3259,7 +3259,7 @@ web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可�
 
 ### `Canvas`
 
-在 12 列响应式栅格（`x: 0..11, w: 2..12, h: 2..33`）或自由画布布局上创建、列出、查看、排布与更新多小组件持久化看板（`看板`）。
+在 12 列响应式栅格（`x: 0..11, w: 2..12, h: 2..120`）或自由画布布局上创建、列出、查看、排布与更新多小组件持久化看板（`看板`）。
 
 ```json
 {
@@ -3322,7 +3322,7 @@ web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可�
     },
     "h": {
       "type": "number",
-      "description": "Grid row span `2..33` (`32px` per row unit)."
+      "description": "Grid row span `2..120` (`36px` per row unit)."
     },
     "zoom": {
       "type": "number",

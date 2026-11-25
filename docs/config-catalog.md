@@ -513,7 +513,7 @@ export type Config = LocalConfig
 
 ## `@deepseek-ai/dsh-blueprint`
 
-- `source`: [`packages/extensions/blueprint/src/index.ts:80`](../packages/extensions/blueprint/src/index.ts)
+- `source`: [`packages/extensions/blueprint/src/index.ts:96`](../packages/extensions/blueprint/src/index.ts)
 
 ```ts config-catalog
 /** Configuration accepted by `BlueprintService`. */

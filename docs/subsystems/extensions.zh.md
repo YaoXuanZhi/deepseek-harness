@@ -189,6 +189,13 @@ getCanvas(id: string): BlueprintCanvasRecord
 @Remote('removePlacement') async removePlacement(request: { readonly canvasId: string; readonly placementId: string }): Promise<BlueprintCanvasRecord>
 
 /**
+ * Auto-pack all Widget tiles on a Canvas into compact non-overlapping 12-column rows (`自动排列`).
+ * @param canvasId - Target Canvas identifier.
+ * @returns Repacked Canvas record.
+ */
+@Remote('arrangeCanvas') async arrangeCanvas(canvasId: string): Promise<BlueprintCanvasRecord>
+
+/**
  * Persist Canvas zoom and pan viewport state.
  * @param request - Canvas id and viewport values.
  * @returns Updated Canvas record.
