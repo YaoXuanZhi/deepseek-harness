@@ -2,7 +2,7 @@
  * Browser-safe Workspace path and display helpers.
  * @module @deepseek-ai/dsh-util-workspace-path
  */
-import { sessionFileAddress } from './file-address.ts'
+import { sessionFileAddress, stripLeadingDriveSlash } from './file-address.ts'
 
 /** Whether a path uses a Windows drive or UNC prefix. */
 function isWindowsStylePath(value: string): boolean {
@@ -21,15 +21,17 @@ export function isAbsoluteWorkspacePath(path: string): boolean {
 /**
  * Resolve a Workspace-relative path into the Host-facing spelling used by path operations.
  * @param cwd - Session Workspace root, when known.
- * @param path - Absolute or Workspace-relative path; leading `./` segments are dropped when joining.
- * @returns an absolute path when a Workspace root is available, otherwise the original path.
+ * @param path - Absolute or Workspace-relative path; leading `./` segments and `/C:` `/` prefixes are dropped.
+ * @returns an absolute path when a Workspace root is available, otherwise the normalized path.
  */
 export function resolveWorkspacePath(cwd: string | undefined, path: string): string {
-  if (isAbsoluteWorkspacePath(path)) return path
-  if (cwd === undefined || cwd === '') return path
-  const separator = isWindowsStylePath(cwd) && cwd.includes('\\') ? '\\' : '/'
-  const base = cwd.replace(/[/\\]+$/, '')
-  const relative = path.replace(/^(?:\.?[/\\])+/, '')
+  const normalizedPath = stripLeadingDriveSlash(path)
+  if (isAbsoluteWorkspacePath(normalizedPath)) return normalizedPath
+  if (cwd === undefined || cwd === '') return normalizedPath
+  const normalizedCwd = stripLeadingDriveSlash(cwd)
+  const separator = isWindowsStylePath(normalizedCwd) && normalizedCwd.includes('\\') ? '\\' : '/'
+  const base = normalizedCwd.replace(/[/\\]+$/, '')
+  const relative = normalizedPath.replace(/^(?:\.?[/\\])+/, '')
   return `${base}${separator}${relative}`
 }
 
@@ -114,7 +116,8 @@ export function relativizeToCwd(text: string, cwd: string | undefined): string {
  * @returns File URL, or undefined for unsupported transports and non-absolute paths.
  */
 export function fileMediaUrl(base: string, path: string): string | undefined {
-  if ((!/^https?:/u.test(base) && !base.startsWith('dsh-app://app/')) || !isAbsoluteWorkspacePath(path)
-    || /^[/\\]{2}/u.test(path) || /[\u0000-\u001f\u007f]/u.test(path)) return undefined
-  return new URL(`api/file?path=${encodeURIComponent(path)}`, base).href
+  const normalized = stripLeadingDriveSlash(path)
+  if ((!/^https?:/u.test(base) && !base.startsWith('dsh-app://app/')) || !isAbsoluteWorkspacePath(normalized)
+    || /^[/\\]{2}/u.test(normalized) || /[\u0000-\u001f\u007f]/u.test(normalized)) return undefined
+  return new URL(`api/file?path=${encodeURIComponent(normalized)}`, base).href
 }

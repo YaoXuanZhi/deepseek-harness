@@ -15,6 +15,7 @@ describe('Workspace path helpers', () => {
     expect(fileAddressFor('s', 'C:\\w', 'x.ts')).toBe('dsh-resource://file/session/s/C:/w/x.ts')
     expect(fileAddressFor('s', 'C:\\w', 'C:\\w\\x.ts')).toBe('dsh-resource://file/session/s/C:/w/x.ts')
     expect(fileAddressFor('s', 'C:\\w', 'D:\\x.ts')).toBe('dsh-resource://file/session/s/D:/x.ts')
+    expect(fileAddressFor('s', 'F:\\OpenSource', '/F:/OpenSource/.spec/AGENTS.md')).toBe('dsh-resource://file/session/s/F:/OpenSource/.spec/AGENTS.md')
     expect(fileAddressFor('s', '\\\\server\\share', 'x.ts')).toBe('dsh-resource://file/session/s///server/share/x.ts')
     expect(fileAddressFor('s', '\\\\server\\share', '\\\\server\\share\\x.ts')).toBe('dsh-resource://file/session/s///server/share/x.ts')
     expect(fileAddressFor('s', undefined, '\\\\server\\share\\x.ts')).toBe('dsh-resource://file/session/s///server/share/x.ts')

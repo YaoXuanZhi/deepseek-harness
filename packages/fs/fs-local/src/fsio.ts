@@ -161,11 +161,13 @@ export function expandHomePrefix(path: string): string {
  * @returns absolute display spelling shared by target resolution and no-follow metadata.
  */
 export function localDisplayPath(cwd: string, path: string): string {
+  /* v8 ignore next -- Native Windows tests cover URI-style `/C:/...` drive prefixes; POSIX keeps `/C:/...` literal. */
+  const normalized = process.platform === 'win32' && /^\/[A-Za-z]:[\\/]/u.test(path) ? path.slice(1) : path
   const absoluteCwd = isAbsolute(cwd) ? cwd : `${process.cwd()}${sep}${cwd}`
-  const raw = isAbsolute(path) ? path : `${absoluteCwd}${sep}${path}`
-  const physicalSpelling = /(?:^|[\\/])\.\.(?:[\\/]|$)/u.test(raw) ? raw : resolve(cwd, path)
+  const raw = isAbsolute(normalized) ? normalized : `${absoluteCwd}${sep}${normalized}`
+  const physicalSpelling = /(?:^|[\\/])\.\.(?:[\\/]|$)/u.test(raw) ? raw : resolve(cwd, normalized)
   /* v8 ignore next -- Native Windows tests cover DOS drive-relative resolution; POSIX preserves physical traversal. */
-  return process.platform === 'win32' ? resolve(cwd, path) : physicalSpelling
+  return process.platform === 'win32' ? resolve(cwd, normalized) : physicalSpelling
 }
 
 /**

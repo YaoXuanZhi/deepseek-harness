@@ -125,6 +125,10 @@ describe('resolveLocalTarget', () => {
     }
     const missing = await resolveLocalTarget(dir, 'missing/deeper/../created.txt')
     expect(missing.targetKey).toBe(join(await realpath(dir), 'missing', 'created.txt'))
+    const slashPrefixed = `/${join(dir, 'created.txt').replaceAll('\\', '/')}`
+    const fromSlashPrefixed = await resolveLocalTarget(dir, slashPrefixed)
+    expect(fromSlashPrefixed.displayPath).toBe(join(dir, 'created.txt'))
+    expect(fromSlashPrefixed.targetKey).toBe(await realpath(join(dir, 'created.txt')))
   })
 
   it.skipIf(process.platform === 'win32')('resolves parent traversal after a symlink in the provider filesystem', async () => {

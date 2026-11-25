@@ -57,13 +57,22 @@ function isDriveSegment(segment: string | undefined): boolean {
 }
 
 /**
+ * Drop a single URI-pathname `/` before a Windows drive root (`/C:/…` -> `C:/…`).
+ * @param path - candidate path in `/` or `\` separator spelling.
+ * @returns `path` without its leading `/` when followed by a drive root, otherwise `path`.
+ */
+export function stripLeadingDriveSlash(path: string): string {
+  return /^\/[A-Za-z]:(?:[/\\]|$)/.test(path) ? path.slice(1) : path
+}
+
+/**
  * Build the address of a file read through one Session.
  * @param sessionId - the Session whose Host workspace resolves the path.
- * @param path - absolute or workspace-relative path; backslashes are normalized to `/`, and leading `./` prefixes are dropped.
+ * @param path - absolute or workspace-relative path; backslashes normalize to `/`, and leading `./` or `/C:` `/` prefixes drop.
  * @returns the `dsh-resource://file/session/<sessionId>/<path>` address.
  */
 export function sessionFileAddress(sessionId: string, path: string): string {
-  const normalized = path.replace(/\\/g, '/').replace(/^(?:\.\/)+/, '')
+  const normalized = stripLeadingDriveSlash(path.replace(/\\/g, '/')).replace(/^(?:\.\/)+/, '')
   return `${FILE_ADDRESS_PREFIX}session/${encodeSegment(sessionId)}/${encodePath(normalized)}`
 }
 
@@ -94,7 +103,8 @@ export function parseFileAddress(address: string): FileAddress | undefined {
     if (scope === 'session') {
       const [id, ...segments] = rest
       if (id === undefined || id === '' || segments.length === 0) return undefined
-      return { scope, sessionId: decodeURIComponent(id), path: segments.map(decodeURIComponent).join('/') }
+      const decoded = stripLeadingDriveSlash(segments.map(decodeURIComponent).join('/'))
+      return { scope, sessionId: decodeURIComponent(id), path: decoded }
     }
     if (scope === 'absolute') {
       // An empty first segment with more behind it is a UNC path's `//`; alone it is no path.

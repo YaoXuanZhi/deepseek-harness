@@ -32,6 +32,7 @@ export function parseFileLink(value: string): { path: string; line?: number } | 
     return undefined
   }
   if (path.length === 0 || /[\u0000-\u001f\u007f]/.test(path)) return undefined
+  if (/^\/[a-z]:[\\/]/i.test(path)) path = path.slice(1)
   if (!isExplicitFilePath(path) && URL.canParse(path)) return undefined
   const suffix = hash < 0 ? /:(\d+)(?::\d+|-(\d+))?$/.exec(destination) : null
   if (suffix !== null) path = path.slice(0, -suffix[0].length)

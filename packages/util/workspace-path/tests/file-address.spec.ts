@@ -20,6 +20,7 @@ describe('file addresses', () => {
     ['/etc/hosts', '/etc/hosts', 'dsh-resource://file/session/s//etc/hosts'],
     ['/', '/', 'dsh-resource://file/session/s//'],
     ['C:\\w\\x.ts', 'C:/w/x.ts', 'dsh-resource://file/session/s/C:/w/x.ts'],
+    ['/F:/OpenSource/AGENTS.md', 'F:/OpenSource/AGENTS.md', 'dsh-resource://file/session/s/F:/OpenSource/AGENTS.md'],
     ['\\\\server\\share\\x.ts', '//server/share/x.ts', 'dsh-resource://file/session/s///server/share/x.ts'],
     ['/a b#c?%.txt', '/a b#c?%.txt', 'dsh-resource://file/session/s//a%20b%23c%3F%25.txt'],
   ])('round-trips the absolute path %s in a Session address', (input, path, expected) => {
@@ -92,6 +93,7 @@ describe('file addresses', () => {
   it('decodes either spelling of a path segment', () => {
     expect(parseFileAddress('dsh-resource://file/session/s/w/a+b.txt')?.path).toBe('w/a+b.txt')
     expect(parseFileAddress('dsh-resource://file/session/s/w/a%2Bb.txt')?.path).toBe('w/a+b.txt')
+    expect(parseFileAddress('dsh-resource://file/session/s//F:/OpenSource/.spec/AGENTS.md')?.path).toBe('F:/OpenSource/.spec/AGENTS.md')
     expect(parseFileAddress('dsh-resource://file/absolute/w/a%2Bb.txt')?.path).toBe('/w/a+b.txt')
   })
 
