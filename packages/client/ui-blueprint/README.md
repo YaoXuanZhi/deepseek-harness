@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`ui-blueprint` renders Kimi Work's four-asset Blueprint experience in the Web and Desktop GUI: sandboxed `<iframe sandbox="allow-scripts">` **Widgets** (`小组件`) inline in Chat with controlled `DaimonWidget.files` upload/download access and floating **Pin Windows** (`桌面置顶`), clickable `daimon-canvas` Markdown preview cards, interactive **Task Cards** (`定时任务` / `小组件任务`) with Enable/Disable and Run-now controls, a Left-Sidebar **Dashboards** (`看板`) navigation page, and a Right-Sidebar Dashboard tab.
+`ui-blueprint` renders Kimi Work's four-asset Blueprint experience in the Web and Desktop GUI: sandboxed `<iframe sandbox="allow-scripts">` **Widgets** (`小组件`) inline in Chat with controlled `DaimonWidget.files` upload/download access and floating **Pin Windows** (`桌面置顶`), clickable `daimon-canvas` Markdown preview cards, interactive **Task Cards** (`定时任务` / `小组件任务`) with Enable/Disable and Run-now controls, a Left-Sidebar **Dashboards** (`看板`) navigation page, and Right-Sidebar full-width Widget and Dashboard tabs.
 
 ## Table of Contents
 

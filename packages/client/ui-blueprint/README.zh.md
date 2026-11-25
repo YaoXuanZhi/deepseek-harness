@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`ui-blueprint` 在 Web 与桌面端界面呈现 Kimi Work 四元蓝图体验：包括支持受控文件桥接（`DaimonWidget.files`）与独立悬浮置顶窗（`桌面置顶`）的对话流内嵌 `<iframe sandbox="allow-scripts">` 交互**小组件**（`Widget`）、可点击的 `daimon-canvas` Markdown 看板预览卡片、带开启/关闭与立即运行按钮的**自动化任务卡片**（定时任务与小组件任务）、左侧导航栏**看板**主视图以及右侧边栏看板标签页。
+`ui-blueprint` 在 Web 与桌面端界面呈现 Kimi Work 四元蓝图体验：包括支持受控文件桥接（`DaimonWidget.files`）与独立悬浮置顶窗（`桌面置顶`）的对话流内嵌 `<iframe sandbox="allow-scripts">` 交互**小组件**（`Widget`）、可点击的 `daimon-canvas` Markdown 看板预览卡片、带开启/关闭与立即运行按钮的**自动化任务卡片**（定时任务与小组件任务）、左侧导航栏**看板**主视图以及右侧边栏独立全宽小组件与看板标签页。
 
 ## 目录
 

@@ -21,6 +21,10 @@ export type BlueprintMainDashboardProps =
 export type BlueprintRightTabProps =
   PropsRuntime<'sidebar.right.pane.tab'> & InjectFace<BlueprintViewInjected> & PropsLocale<'blueprint'>
 
+/** Props of the Right-Sidebar standalone Widget tab body. */
+export type BlueprintRightWidgetTabProps =
+  PropsRuntime<'sidebar.right.pane.tab'> & InjectFace<BlueprintViewInjected> & PropsLocale<'blueprint'>
+
 interface SharedBoardProps {
   readonly initialCanvasId?: string | undefined
   readonly embeddedInSidebar?: boolean | undefined
@@ -291,18 +295,38 @@ function DashboardBoardCore({ initialCanvasId, embeddedInSidebar, injected, t }:
     ?? (initialCanvasId ? canvases.find(c => c.id === initialCanvasId) : undefined)
     ?? canvases[0]
 
-  // Compute full 12-column design bounding box (`>= 1092px` wide) and proportional `boardZoom`
-  let maxRightPx = DESIGN_BOARD_WIDTH_PX
+  const resolveDisplayRect = (tile: BlueprintCanvasPlacement): BlueprintGridRect => {
+    if (
+      embeddedInSidebar === true
+      && interaction === null
+      && activeCanvas !== undefined
+      && activeCanvas.placements.length === 1
+      && tile.rect.x === 0
+      && tile.heightMode !== 'fixed'
+    ) {
+      return { ...tile.rect, w: GRID_COLS }
+    }
+    return tile.rect
+  }
+
+  // Compute design bounding box and proportional `boardZoom`.
+  // In the Right Sidebar when idle, fit the occupied column span so narrow/single-column boards
+  // never leave a blank right half; expand to full 12 columns immediately during drag/resize.
+  let occupiedRightPx = 0
   let maxBottomPx = 280
   if (activeCanvas) {
     for (const tile of activeCanvas.placements) {
-      const effectiveRect = interaction?.tileId === tile.id ? interaction.projectedRect : tile.rect
+      const effectiveRect = interaction?.tileId === tile.id
+        ? interaction.projectedRect
+        : resolveDisplayRect(tile)
       const box = gridRectToDesignBox(effectiveRect)
-      if (box.x + box.w > maxRightPx) maxRightPx = box.x + box.w
+      if (box.x + box.w > occupiedRightPx) occupiedRightPx = box.x + box.w
       if (box.y + box.h > maxBottomPx) maxBottomPx = box.y + box.h
     }
   }
-  const boardDesignW = maxRightPx
+  const boardDesignW = embeddedInSidebar === true && interaction === null && occupiedRightPx > 0
+    ? Math.max(colsToDesignPx(6), occupiedRightPx)
+    : Math.max(DESIGN_BOARD_WIDTH_PX, occupiedRightPx)
   const boardDesignH = maxBottomPx + 16
   const boardZoom = computeBoardZoom(boardDesignW, scrollClientWidth)
   const counterScale = 1 / Math.max(0.05, boardZoom)
@@ -361,6 +385,7 @@ function DashboardBoardCore({ initialCanvasId, embeddedInSidebar, injected, t }:
     } catch (_captureErr) {
       // Synthetic pointer events in unit tests do not register active pointer ids.
     }
+    const effectiveStartRect = resolveDisplayRect(tile)
     setInteraction({
       pointerId: ev.pointerId,
       canvasId,
@@ -370,10 +395,10 @@ function DashboardBoardCore({ initialCanvasId, embeddedInSidebar, injected, t }:
       startClientX: ev.clientX,
       startClientY: ev.clientY,
       startZoom: Math.max(0.05, boardZoom),
-      startRect: tile.rect,
+      startRect: effectiveStartRect,
       deltaDesignX: 0,
       deltaDesignY: 0,
-      projectedRect: tile.rect,
+      projectedRect: effectiveStartRect,
     })
   }
 
@@ -636,7 +661,9 @@ function DashboardBoardCore({ initialCanvasId, embeddedInSidebar, injected, t }:
                 const isMenuOpen = openTileMenuId === tile.id
                 const isInteractingThis = interaction?.tileId === tile.id
 
-                const baseBox = gridRectToDesignBox(tile.rect)
+                const baseBox = gridRectToDesignBox(
+                  isInteractingThis ? interaction.startRect : resolveDisplayRect(tile),
+                )
                 const projectedBox = isInteractingThis
                   ? gridRectToDesignBox(interaction.projectedRect)
                   : baseBox
@@ -1015,4 +1042,124 @@ export function BlueprintRightDashboardTab(props: BlueprintRightTabProps): React
   const params = tab.navigation.params as { readonly canvasId?: string } | undefined
   const canvasId = typeof params?.canvasId === 'string' ? params.canvasId : undefined
   return <DashboardBoardCore initialCanvasId={canvasId} embeddedInSidebar injected={injected} t={t} />
+}
+
+/**
+ * Right-Sidebar standalone full-width Widget tab registered under `sidebar.right.pane.tab`.
+ * Renders a single Blueprint Widget across 100% of the Right Sidebar width without 12-column Canvas downscaling.
+ * @param props - Right-Sidebar tab runtime props, Blueprint store hooks, and localized copy.
+ * @returns Full-width Right-Sidebar Widget preview element.
+ */
+export function BlueprintRightWidgetTab(props: BlueprintRightWidgetTabProps): ReactNode {
+  const {
+    useTabInfo,
+    useBlueprintState,
+    useBlueprintTheme,
+    usePinnedWidgetIds,
+    localeCode,
+    ensureWidget,
+    saveWidgetInput,
+    emitWidgetEvent,
+    handleWidgetFilesCall,
+    togglePinWindow,
+    pinWidgetToDashboard,
+    refreshCatalog,
+    runAutomationNow,
+    t,
+  } = props
+  const { tab } = useTabInfo()
+  const params = tab.navigation.params as { readonly widgetId?: string; readonly title?: string } | undefined
+  const widgetId = typeof params?.widgetId === 'string' ? params.widgetId : ''
+
+  const bp = useBlueprintState(s => s)
+  const theme = useBlueprintTheme(s => s)
+  const pinnedIds = usePinnedWidgetIds(ids => ids)
+  const [refreshSeq, setRefreshSeq] = useState(0)
+
+  const widgetRecord = bp.catalog.widgets.find(w => w.id === widgetId)
+  const detail = widgetId ? bp.widgetDetails[widgetId] : undefined
+  const displayTitle = widgetRecord?.title ?? params?.title ?? (widgetId || t('widget.badge'))
+  const isPinned = widgetId !== '' && pinnedIds.includes(widgetId)
+  const boundAutomation = bp.catalog.bindings.find(
+    b => b.enabled && b.source.kind === 'automation' && b.target.kind === 'widget' && b.target.id === widgetId,
+  )
+
+  return (
+    <div className={css.page}>
+      <div className={css.header}>
+        <div className={css.widgetTitleGroup}>
+          <span className={css.widgetTabTitle}>{displayTitle}</span>
+        </div>
+        {widgetId !== '' && (
+          <div className={css.toolbarRight}>
+            {boundAutomation !== undefined && (
+              <button
+                type="button"
+                className={css.outlineBtn}
+                onClick={() => { void runAutomationNow(boundAutomation.source.id) }}
+              >
+                <PlayGlyph />
+                <span>{t('task.runNow')}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className={css.outlineBtn}
+              onClick={() => {
+                setRefreshSeq(n => n + 1)
+                void refreshCatalog()
+              }}
+            >
+              <RefreshGlyph />
+              <span>{t('widget.refresh')}</span>
+            </button>
+            <button
+              type="button"
+              className={css.outlineBtn}
+              aria-pressed={isPinned}
+              onClick={() => { void togglePinWindow(widgetId, displayTitle, detail?.assembledHtml) }}
+            >
+              <span>{isPinned ? t('widget.unpinWindow') : t('widget.pinWindow')}</span>
+            </button>
+            <button
+              type="button"
+              className={css.outlineBtn}
+              onClick={() => { void pinWidgetToDashboard(widgetId, displayTitle, true) }}
+            >
+              <span>{t('widget.pinToDashboard')}</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className={css.widgetTabScroll}>
+        {widgetId === '' ? (
+          <div className={css.emptyState}>
+            <div className={css.emptyHint}>{t('widget.unavailable')}</div>
+          </div>
+        ) : (
+          <div className={css.widgetTabCard}>
+            <BlueprintWidgetFrame
+              widgetId={widgetId}
+              title={displayTitle}
+              detail={detail}
+              status={widgetRecord?.status}
+              theme={theme}
+              locale={localeCode}
+              chromeless
+              refreshToken={refreshSeq}
+              minAutoHeight={240}
+              maxAutoHeight={4096}
+              isPinned={isPinned}
+              onEnsureDetail={ensureWidget}
+              onSaveInput={saveWidgetInput}
+              onEmitEvent={emitWidgetEvent}
+              onFilesCall={handleWidgetFilesCall}
+              t={t}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }

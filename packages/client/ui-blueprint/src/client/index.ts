@@ -29,7 +29,11 @@ import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import { createBlueprintCatalogController, type BlueprintClientState } from './catalog-source.ts'
-import { BlueprintMainDashboardPage, BlueprintRightDashboardTab } from './BlueprintDashboardBoard.tsx'
+import {
+  BlueprintMainDashboardPage,
+  BlueprintRightDashboardTab,
+  BlueprintRightWidgetTab,
+} from './BlueprintDashboardBoard.tsx'
 import {
   BlueprintAutomationToolView,
   BlueprintBindingToolView,
@@ -49,6 +53,10 @@ export const DASHBOARDS_PANEL_ID = 'dashboards' as MainPanelId
 export const BLUEPRINT_DASHBOARD_TAB_ID = '@deepseek-ai/dsh-client-ui-blueprint/dashboard'
 /** Right-Sidebar tab kind for Blueprint Dashboards. */
 export const BLUEPRINT_DASHBOARD_TAB_KIND = 'blueprintDashboard'
+/** Right-Sidebar tab implementation id for standalone full-width Blueprint Widgets. */
+export const BLUEPRINT_WIDGET_TAB_ID = '@deepseek-ai/dsh-client-ui-blueprint/widget'
+/** Right-Sidebar tab kind for standalone full-width Blueprint Widgets. */
+export const BLUEPRINT_WIDGET_TAB_KIND = 'blueprintWidget'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -61,6 +69,8 @@ declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
   interface SidebarRightTabParamsMap {
     /** Optional target Canvas id opened in the Right Sidebar. */
     blueprintDashboard: { readonly canvasId?: string }
+    /** Target Widget id and optional fallback title opened in the Right Sidebar. */
+    blueprintWidget: { readonly widgetId: string; readonly title?: string }
   }
 }
 
@@ -86,6 +96,7 @@ export interface BlueprintViewInjected {
   readonly handleWidgetFilesCall: (widgetId: string, method: string, args: unknown) => Promise<WidgetFilesCallOutcome>
   readonly togglePinWindow: (widgetId: string, title: string, fallbackHtml?: string) => Promise<void>
   readonly pinWidgetToDashboard: (widgetId: string, title: string, openAside?: boolean) => Promise<void>
+  readonly openWidgetInRight: (widgetId: string, title?: string) => void
   readonly openDashboardInRight: (canvasId?: string) => void
   readonly openDashboardInMain: () => void
   readonly createCanvas: (title: string) => Promise<string | undefined>
@@ -101,7 +112,11 @@ export interface BlueprintViewInjected {
   readonly runAutomationNow: (automationId: string) => Promise<void>
 }
 
-export type { BlueprintMainDashboardProps, BlueprintRightTabProps } from './BlueprintDashboardBoard.tsx'
+export type {
+  BlueprintMainDashboardProps,
+  BlueprintRightTabProps,
+  BlueprintRightWidgetTabProps,
+} from './BlueprintDashboardBoard.tsx'
 export type { BlueprintToolViewProps, BlueprintTurnTailProps, DaimonCanvasFenceProps } from './BlueprintToolViews.tsx'
 export type { BlueprintTileControlsProps, BlueprintWidgetFrameProps } from './BlueprintWidgetFrame.tsx'
 export type { BlueprintTurnAutomationItem, BlueprintTurnData, BlueprintTurnWidgetItem } from './turn-blueprint.ts'
@@ -137,6 +152,14 @@ function BlueprintDashboardTabTitle({ useTabInfo, useBlueprintState, t }: Dashbo
   const canvases = useBlueprintState(s => s.catalog.canvases)
   const matched = params?.canvasId ? canvases.find(c => c.id === params.canvasId) : canvases[0]
   return matched?.title ?? t('tab.dashboard')
+}
+
+function BlueprintWidgetTabTitle({ useTabInfo, useBlueprintState, t }: DashboardTabTitleProps): ReactNode {
+  const { tab } = useTabInfo()
+  const params = tab.navigation.params as { readonly widgetId?: string; readonly title?: string } | undefined
+  const widgets = useBlueprintState(s => s.catalog.widgets)
+  const matched = params?.widgetId ? widgets.find(w => w.id === params.widgetId) : undefined
+  return matched?.title ?? params?.title ?? t('widget.badge')
 }
 
 /** Required browser services for Blueprint UI surfaces. */
@@ -181,6 +204,17 @@ export function apply(ctx: ClientContext): void {
       })
     } catch (_openErr) {
       ctx.layout.selectPanel(DASHBOARDS_PANEL_ID)
+    }
+  }
+
+  const openWidgetInRight = (widgetId: string, title?: string): void => {
+    void controller.ensureWidget(widgetId)
+    try {
+      ctx.sidebarRight.openTab(BLUEPRINT_WIDGET_TAB_KIND, {
+        params: title ? { widgetId, title } : { widgetId },
+      })
+    } catch (_openWidgetErr) {
+      openDashboardInRight()
     }
   }
 
@@ -234,6 +268,13 @@ export function apply(ctx: ClientContext): void {
     }],
   }), 'ui-blueprint: right tab definition')
 
+  ctx.effect(() => ctx.sidebarRightTabs.register({
+    id: BLUEPRINT_WIDGET_TAB_ID,
+    kind: BLUEPRINT_WIDGET_TAB_KIND,
+    priority: 'builtin',
+    title: () => t('widget.badge'),
+  }), 'ui-blueprint: right widget tab definition')
+
   const updatePlacementLayout = async (
     canvasId: string,
     placementId: string,
@@ -269,25 +310,41 @@ export function apply(ctx: ClientContext): void {
       const snap = controller.source.getSnapshot().catalog
       const firstCanvas = snap.canvases[0]
       let targetCanvasId = firstCanvas?.id
-      const isEmptyCanvas = !firstCanvas || firstCanvas.placements.length === 0
+      const existingPlacement = firstCanvas?.placements.find(p => p.widgetId === widgetId)
+      const otherPlacements = firstCanvas
+        ? firstCanvas.placements.filter(p => p.widgetId !== widgetId)
+        : []
       if (!targetCanvasId) {
         const created = await ctx.remote.blueprint.createCanvas({ title: t('nav.dashboards') })
         if (created.ok) targetCanvasId = created.value.id
       }
       if (targetCanvasId) {
-        await ctx.remote.blueprint.placeWidget({
-          canvasId: targetCanvasId,
-          widgetId,
-          titleOverride: title,
-          rect: { w: isEmptyCanvas ? 12 : 6, h: 10 },
-          heightMode: 'auto',
-        }).catch(() => {})
-        await controller.refresh()
+        if (existingPlacement !== undefined) {
+          if (otherPlacements.length === 0 && existingPlacement.rect.x === 0 && existingPlacement.rect.w < 12) {
+            await ctx.remote.blueprint.updatePlacement({
+              canvasId: targetCanvasId,
+              placementId: existingPlacement.id,
+              rect: { x: 0, w: 12 },
+              reflow: true,
+            }).catch(() => {})
+            await controller.refresh()
+          }
+        } else {
+          await ctx.remote.blueprint.placeWidget({
+            canvasId: targetCanvasId,
+            widgetId,
+            titleOverride: title,
+            rect: { w: otherPlacements.length === 0 ? 12 : 6, h: 10 },
+            heightMode: 'auto',
+          }).catch(() => {})
+          await controller.refresh()
+        }
         if (openAside) {
           openDashboardInRight(targetCanvasId)
         }
       }
     },
+    openWidgetInRight,
     openDashboardInRight,
     openDashboardInMain,
     createCanvas: async (title) => {
@@ -297,11 +354,26 @@ export function apply(ctx: ClientContext): void {
     },
     placeWidgetOnCanvas: async (canvasId, widgetId) => {
       const targetCanvas = controller.source.getSnapshot().catalog.canvases.find(c => c.id === canvasId)
-      const isEmptyCanvas = !targetCanvas || targetCanvas.placements.length === 0
+      const existingPlacement = targetCanvas?.placements.find(p => p.widgetId === widgetId)
+      const otherPlacements = targetCanvas
+        ? targetCanvas.placements.filter(p => p.widgetId !== widgetId)
+        : []
+      if (existingPlacement !== undefined) {
+        if (otherPlacements.length === 0 && existingPlacement.rect.x === 0 && existingPlacement.rect.w < 12) {
+          await ctx.remote.blueprint.updatePlacement({
+            canvasId,
+            placementId: existingPlacement.id,
+            rect: { x: 0, w: 12 },
+            reflow: true,
+          }).catch(() => {})
+          await controller.refresh()
+        }
+        return
+      }
       await ctx.remote.blueprint.placeWidget({
         canvasId,
         widgetId,
-        rect: { w: isEmptyCanvas ? 12 : 6, h: 10 },
+        rect: { w: otherPlacements.length === 0 ? 12 : 6, h: 10 },
         heightMode: 'auto',
       }).catch(() => {})
       await controller.refresh()
@@ -360,19 +432,35 @@ export function apply(ctx: ClientContext): void {
     inject: buildInjected,
   }, BlueprintMainDashboardPage))
 
-  ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
-    name: 'sidebar.right.pane.tab',
-    key: BLUEPRINT_DASHBOARD_TAB_ID,
-    locale: NS,
-    inject: buildInjected,
-  }, BlueprintRightDashboardTab))
+  ctx.slots.inject('sidebar.right.pane.tab', function* () {
+    yield ctx.slots.register({
+      name: 'sidebar.right.pane.tab',
+      key: BLUEPRINT_DASHBOARD_TAB_ID,
+      locale: NS,
+      inject: buildInjected,
+    }, BlueprintRightDashboardTab)
+    yield ctx.slots.register({
+      name: 'sidebar.right.pane.tab',
+      key: BLUEPRINT_WIDGET_TAB_ID,
+      locale: NS,
+      inject: buildInjected,
+    }, BlueprintRightWidgetTab)
+  })
 
-  ctx.slots.inject('sidebar.right.pane.tab.title', () => ctx.slots.register({
-    name: 'sidebar.right.pane.tab.title',
-    key: BLUEPRINT_DASHBOARD_TAB_ID,
-    locale: NS,
-    inject: () => ({ hooks: { blueprintState: controller.source } }),
-  }, BlueprintDashboardTabTitle))
+  ctx.slots.inject('sidebar.right.pane.tab.title', function* () {
+    yield ctx.slots.register({
+      name: 'sidebar.right.pane.tab.title',
+      key: BLUEPRINT_DASHBOARD_TAB_ID,
+      locale: NS,
+      inject: () => ({ hooks: { blueprintState: controller.source } }),
+    }, BlueprintDashboardTabTitle)
+    yield ctx.slots.register({
+      name: 'sidebar.right.pane.tab.title',
+      key: BLUEPRINT_WIDGET_TAB_ID,
+      locale: NS,
+      inject: () => ({ hooks: { blueprintState: controller.source } }),
+    }, BlueprintWidgetTabTitle)
+  })
 
   ctx.slots.inject('tool.call.toolview', function* () {
     yield ctx.slots.register({

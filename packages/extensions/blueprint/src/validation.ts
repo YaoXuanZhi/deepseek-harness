@@ -118,7 +118,7 @@ export function resolveCanvasGridRect(
   existing: readonly BlueprintCanvasPlacement[],
   partial?: Partial<BlueprintGridRect>,
 ): BlueprintGridRect {
-  const w = partial?.w ?? 6
+  const w = partial?.w ?? (existing.length === 0 ? CANVAS_GRID_COLS : 6)
   const h = partial?.h ?? 8
   if (!Number.isInteger(w) || w < 2 || w > 12) {
     throw new BlueprintError(`Grid width \`w\` must be an integer between 2 and 12 (received ${String(w)})`, 'BLUEPRINT_INVALID_LAYOUT')
@@ -250,6 +250,11 @@ export function moveCanvasPlacement(
 export function autoArrangeCanvasPlacements(
   placements: readonly BlueprintCanvasPlacement[],
 ): BlueprintCanvasPlacement[] {
+  if (placements.length === 1 && placements[0] !== undefined) {
+    const sole = placements[0]
+    const h = Math.min(MAX_CANVAS_GRID_HEIGHT, Math.max(2, Math.round(sole.rect.h)))
+    return [{ ...sole, rect: { x: 0, y: 0, w: CANVAS_GRID_COLS, h } }]
+  }
   const ordered = [...placements].sort(
     (a, b) => (a.rect.y - b.rect.y) || (a.rect.x - b.rect.x) || ((a.zIndex ?? 0) - (b.zIndex ?? 0)),
   )

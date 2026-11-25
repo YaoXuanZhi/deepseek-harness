@@ -517,3 +517,43 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* ── Standalone Full-Width Right-Sidebar Widget Tab ── */
+
+.widgetTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.widgetTabTitle {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widgetTabScroll {
+  flex: 1 1 0%;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  padding: 16px;
+  box-sizing: border-box;
+  background-color: var(--dsw-alias-bg-base);
+}
+
+.widgetTabCard {
+  width: 100%;
+  border-radius: var(--dsw-radius-md);
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  background-color: var(--dsw-alias-bg-layer-1);
+  overflow: hidden;
+}

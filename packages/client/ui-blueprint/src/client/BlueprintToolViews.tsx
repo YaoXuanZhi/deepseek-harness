@@ -61,6 +61,7 @@ export function BlueprintWidgetToolView(props: BlueprintToolViewProps): ReactNod
     handleWidgetFilesCall,
     togglePinWindow,
     pinWidgetToDashboard,
+    openWidgetInRight,
     t,
   } = props
   const bp = useBlueprintState(s => s)
@@ -101,7 +102,10 @@ export function BlueprintWidgetToolView(props: BlueprintToolViewProps): ReactNod
         onFilesCall={handleWidgetFilesCall}
         onTogglePinWindow={() => { void togglePinWindow(widgetId, title, fallbackHtml) }}
         onPinToDashboard={() => { void pinWidgetToDashboard(widgetId, title) }}
-        onOpenInRight={() => { void pinWidgetToDashboard(widgetId, title, true) }}
+        onOpenInRight={() => {
+          if (typeof openWidgetInRight === 'function') openWidgetInRight(widgetId, title)
+          else void pinWidgetToDashboard(widgetId, title, true)
+        }}
         t={t}
       />
     )
@@ -324,7 +328,10 @@ export function BlueprintTurnTail(props: BlueprintTurnTailProps): ReactNode {
             onFilesCall={props.handleWidgetFilesCall}
             onTogglePinWindow={() => { void props.togglePinWindow(item.widgetId, item.title, item.assembledHtml) }}
             onPinToDashboard={() => { void props.pinWidgetToDashboard(item.widgetId, item.title) }}
-            onOpenInRight={() => { void props.pinWidgetToDashboard(item.widgetId, item.title, true) }}
+            onOpenInRight={() => {
+              if (typeof props.openWidgetInRight === 'function') props.openWidgetInRight(item.widgetId, item.title)
+              else void props.pinWidgetToDashboard(item.widgetId, item.title, true)
+            }}
             t={props.t}
           />
         )

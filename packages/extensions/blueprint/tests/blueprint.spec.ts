@@ -169,6 +169,23 @@ describe('@deepseek-ai/dsh-blueprint', () => {
     const arranged = await ctx.blueprint.arrangeCanvas(canvas.id)
     expect(arranged.placements.find(p => p.widgetId === widget.id)?.rect.y).toBe(0)
 
+    const soloCanvas = await ctx.blueprint.createCanvas({
+      id: 'solo-board',
+      title: '单组件看板',
+    })
+    const soloPlaced = await ctx.blueprint.placeWidget({
+      canvasId: soloCanvas.id,
+      widgetId: widget.id,
+    })
+    expect(soloPlaced.placements[0]?.rect).toEqual({ x: 0, y: 0, w: 12, h: 8 })
+    await ctx.blueprint.updatePlacement({
+      canvasId: soloCanvas.id,
+      placementId: widget.id,
+      rect: { x: 0, y: 0, w: 6, h: 8 },
+    })
+    const soloArranged = await ctx.blueprint.arrangeCanvas(soloCanvas.id)
+    expect(soloArranged.placements[0]?.rect).toEqual({ x: 0, y: 0, w: 12, h: 8 })
+
     expect(matchesCronMinute('30 9 * * 1-5', new Date('2026-11-24T09:30:00'))).toBe(true)
     expect(matchesCronMinute('30 9 * * 1-5', new Date('2026-11-24T09:31:00'))).toBe(false)
 

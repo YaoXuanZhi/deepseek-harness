@@ -14,8 +14,10 @@ import {
 import {
   BlueprintMainDashboardPage,
   BlueprintRightDashboardTab,
+  BlueprintRightWidgetTab,
   type BlueprintMainDashboardProps,
   type BlueprintRightTabProps,
+  type BlueprintRightWidgetTabProps,
 } from '../src/client/BlueprintDashboardBoard.tsx'
 import { zh, type BlueprintLocaleKey } from '../src/client/locales.ts'
 import { blueprintTurnCardsDefinition } from '../src/client/turn-blueprint.ts'
@@ -275,6 +277,8 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
     )
 
     expect(screen.getByRole('tab', { name: '经营分析看板' })).toBeTruthy()
+    const soloTile = document.querySelector('[data-blueprint-tile="tile-1"]') as HTMLElement | null
+    expect(soloTile?.style.width).toBe('1092px')
     const boardIframe = screen.getByTitle('核心指标卡') as HTMLIFrameElement
 
     // Auto-height row sync on Kimi 1092px 12-column design canvas (960px -> ceil((960+12)/44) = 23 rows)
@@ -446,6 +450,7 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
           handleWidgetFilesCall: vi.fn(),
           togglePinWindow: vi.fn(),
           pinWidgetToDashboard: async () => { },
+          openWidgetInRight: vi.fn(),
           setAutomationEnabled: async () => { },
           runAutomationNow: async () => { },
           t: makeT(),
@@ -457,6 +462,67 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
     expect(screen.getByRole('button', { name: '取消置顶' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByText('模型价格巡检')).toBeTruthy()
     expect(screen.getByRole('button', { name: '开启' })).toBeTruthy()
+
+    cleanup()
+    const pinToBoard = vi.fn().mockResolvedValue(undefined)
+    const widgetTabState: BlueprintClientState = {
+      loaded: true,
+      catalog: {
+        revision: 1,
+        widgets: [{
+          id: 'calc-1' as never,
+          title: '推理成本计算器',
+          slots: {},
+          events: {},
+          latestData: {},
+          savedInput: {},
+          status: 'idle',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        }],
+        canvases: [],
+        automations: [],
+        bindings: [],
+      },
+      widgetDetails: {
+        'calc-1': {
+          id: 'calc-1' as never,
+          title: '推理成本计算器',
+          slots: {},
+          events: {},
+          latestData: {},
+          savedInput: {},
+          status: 'idle',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+          rawHtml: '<div>Full Width Widget</div>',
+          assembledHtml: '<!DOCTYPE html><html><body><div>Full Width Widget</div></body></html>',
+        },
+      },
+    }
+    render(
+      <BlueprintRightWidgetTab
+        {...({
+          useTabInfo: (() => ({ tab: { id: 'tw1', kind: 'blueprintWidget', navigation: { params: { widgetId: 'calc-1', title: '推理成本计算器' } } } })) as never,
+          useBlueprintState: (sel: (s: BlueprintClientState) => unknown) => sel(widgetTabState),
+          useBlueprintTheme: (sel: (th: 'light' | 'dark') => unknown) => sel('light'),
+          usePinnedWidgetIds: (sel: (ids: readonly string[]) => unknown) => sel([]),
+          localeCode: 'zh-CN',
+          ensureWidget: () => { },
+          saveWidgetInput: () => { },
+          emitWidgetEvent: () => { },
+          handleWidgetFilesCall: vi.fn(),
+          togglePinWindow: vi.fn(),
+          pinWidgetToDashboard: pinToBoard,
+          refreshCatalog: async () => { },
+          runAutomationNow: async () => { },
+          t: makeT(),
+        } as Partial<BlueprintRightWidgetTabProps> as BlueprintRightWidgetTabProps)}
+      />,
+    )
+    expect(screen.getByTitle('推理成本计算器')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '放入看板' }))
+    expect(pinToBoard).toHaveBeenCalledWith('calc-1', '推理成本计算器', true)
   })
 
   it('dispatches DaimonWidget.files write/readText/download and manages Desktop + Web floating Pin Windows', async () => {
