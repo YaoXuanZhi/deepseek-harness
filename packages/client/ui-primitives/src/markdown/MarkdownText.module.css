@@ -5,7 +5,9 @@
 .markdown {
   min-width: 0;
   overflow-wrap: anywhere;
+  word-break: break-word;
   font: var(--dsw-font-markdown-base);
+  letter-spacing: 0;
   color: var(--dsw-alias-label-primary);
 }
 
@@ -15,27 +17,32 @@
 
 .markdown h1 {
   font: var(--dsw-font-markdown-h1);
-  margin: 32px 0 16px;
+  letter-spacing: 0;
+  margin: 20px 0 12px;
 }
 
 .markdown h2 {
   font: var(--dsw-font-markdown-h2);
-  margin: 32px 0 16px;
+  letter-spacing: 0;
+  margin: 20px 0 12px;
 }
 
 .markdown h3 {
   font: var(--dsw-font-markdown-h3);
-  margin: 32px 0 16px;
+  letter-spacing: 0;
+  margin: 20px 0 12px;
 }
 
 .markdown h4 {
   font: var(--dsw-font-markdown-h4);
-  margin: 16px 0;
+  letter-spacing: 0;
+  margin: 16px 0 8px;
 }
 
 .markdown :where(h5, h6) {
   font: var(--dsw-font-markdown-base-strong);
-  margin: 16px 0;
+  letter-spacing: 0;
+  margin: 16px 0 8px;
 }
 
 .markdown :where(h1, h2, h3, h4, h5, h6) strong {
@@ -43,7 +50,7 @@
 }
 
 .markdown p {
-  margin: 16px 0;
+  margin: 12px 0;
 }
 
 /* Tighten h4–h6 against a following list (design: 8px gap). */
@@ -99,10 +106,10 @@
    Separate the link from preceding prose more than the icon from its label. */
 .linkIcon {
   flex: none;
-  width: 1.1em;
-  height: 1.1em;
-  vertical-align: calc(0.5cap - 0.55em);
-  margin-inline: 0.25em 0.125em;
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: calc(0.5cap - 0.525em);
+  margin-inline: 0.18em 0.14em;
 }
 
 .markdown code .linkIcon {
@@ -110,8 +117,28 @@
 }
 
 .markdown :where(ul, ol) {
-  margin: 16px 0;
-  padding-left: 18px;
+  margin: 12px 0;
+  padding-inline-start: 24px;
+}
+
+.markdown ul {
+  list-style-type: disc;
+}
+
+.markdown ul ul {
+  list-style-type: circle;
+}
+
+.markdown ul ul ul {
+  list-style-type: square;
+}
+
+.markdown ol {
+  list-style-type: decimal;
+}
+
+.markdown li {
+  padding-inline-start: 4px;
 }
 
 .markdown li:not(:first-child) {
@@ -119,18 +146,18 @@
 }
 
 .markdown li > :where(ul, ol) {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .markdown li::marker {
-  line-height: 24px;
-  color: var(--dsw-alias-label-secondary);
+  line-height: calc(22px + var(--dsh-content-font-delta, 0px));
+  color: var(--dsw-alias-label-primary);
 }
 
 /* Nested ol under ul/ol: markers inside (models sometimes emit this shape). */
 .markdown :where(ul, ol) ol {
   list-style-position: inside;
-  padding-left: 0;
+  padding-inline-start: 0;
 }
 
 .markdown :where(ul, ol) ol li p {
@@ -154,33 +181,49 @@
   display: block;
   border: none;
   height: 0.5px;
-  margin: 32px 0;
+  margin: 24px 0;
   background: var(--dsw-alias-border-l2);
 }
 
 .markdown blockquote {
-  border-left: 2px solid var(--dsw-alias-label-caption);
-  margin: 16px 0 0;
-  padding-left: 14px;
+  position: relative;
+  border-left: none;
+  margin: 12px 0;
+  padding: 0 0 0 22px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.markdown blockquote::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 8px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--dsw-alias-markdown-quote-bar);
 }
 
 .markdown pre {
-  margin: 16px 0;
+  margin: 12px 0;
   font-family: var(--ds-font-family-code);
   overflow: auto;
 }
 
 .markdown :not(pre) > code {
-  display: inline-flex;
-  align-items: center;
-  box-sizing: border-box;
+  display: inline;
   font: var(--dsw-font-markdown-code);
   font-family: var(--ds-font-family-code);
   font-size: 0.875em !important;
+  color: var(--dsw-alias-label-primary);
   background-color: var(--dsw-alias-markdown-inline-code);
-  border: 0.5px solid var(--dsw-alias-border-l1);
-  border-radius: var(--dsw-radius-sm);
-  padding: 0 5px;
+  border: none;
+  border-radius: var(--dsw-radius-xs);
+  margin: 0 2px;
+  padding: 2px 6px;
+  word-break: break-word;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .markdown :where(h1, h2, h3, h4, h5, h6) code {
@@ -259,6 +302,8 @@
 
 .tableScroll th {
   text-align: start;
+  vertical-align: middle;
+  word-break: break-word;
   padding: 10px 16px;
   border-bottom: 0.5px solid var(--dsw-alias-border-l3);
   border-top: none;
@@ -269,12 +314,18 @@
 }
 
 .tableScroll td {
+  vertical-align: middle;
+  word-break: break-word;
   padding: 10px 16px;
   border-bottom: 0.5px solid var(--dsw-alias-border-l2);
   font: var(--dsw-font-markdown-table);
   max-width: 320px;
   max-width: min(30vw, 320px);
   min-width: 100px;
+}
+
+.tableScroll tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .tableScroll th:first-child,
@@ -287,7 +338,7 @@
 }
 
 .tableScroll table code {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .markdown > *:first-child,
@@ -383,7 +434,12 @@
 }
 
 .compact blockquote {
-  padding-left: 8px;
+  padding-left: 10px;
+}
+
+.compact blockquote::before {
+  left: 2px;
+  width: 2px;
 }
 
 .compact hr {
@@ -414,7 +470,9 @@
   font: inherit;
   font-family: var(--ds-font-family-code);
   font-size: 1em !important;
+  color: inherit;
   border-radius: var(--dsw-radius-xs);
+  margin: 0;
   padding: 0 3px;
   box-decoration-break: clone;
 }
@@ -506,11 +564,11 @@
    block's spacing among its siblings; the blocks inside it carry none, so
    wrappers between the box and a block do not change the document rhythm. */
 .fenceSeat {
-  margin: 16px 0;
+  margin: 12px 0;
 }
 
 .fenceSeat:not(:last-child) {
-  margin-bottom: 11px;
+  margin-bottom: 12px;
 }
 
 .markdown.compact .fenceSeat {

@@ -303,12 +303,13 @@ body {
   --dsw-alias-menu-icon: var(--dsw-static-kimi-ink-light);
   --dsw-alias-link: var(--dsw-static-kimi-blue-light);
   --dsw-alias-markdown-citation: var(--dsw-static-kimi-active-light);
-  --dsw-alias-markdown-code-block-banner: var(--dsw-static-kimi-hover-light);
-  --dsw-alias-markdown-code-block: var(--dsw-static-kimi-secondary-light);
+  --dsw-alias-markdown-code-block-banner: var(--dsw-static-kimi-secondary-light);
+  --dsw-alias-markdown-code-block: var(--dsw-static-kimi-surface-light);
   --dsw-alias-markdown-code-segment-selected: var(--dsw-static-kimi-surface-light);
   --dsw-alias-markdown-code-segment-unselected: var(--dsw-static-kimi-hover-light);
-  --dsw-alias-markdown-inline-code: var(--dsw-static-kimi-secondary-light);
+  --dsw-alias-markdown-inline-code: rgba(0, 0, 0, 0.042);
   --dsw-alias-markdown-placeholder: var(--dsw-static-kimi-secondary-light);
+  --dsw-alias-markdown-quote-bar: rgba(0, 0, 0, 0.12);
   --dsw-alias-markdown-tag: var(--dsw-static-kimi-hover-light);
   --dsw-alias-scrollbar-bg-l1: var(--dsw-static-neutral-200);
   --dsw-alias-scrollbar-bg-l2: var(--dsw-static-neutral-200);
@@ -459,8 +460,9 @@ body[data-ds-dark-theme] {
   --dsw-alias-markdown-code-block: var(--dsw-static-kimi-surface-dark);
   --dsw-alias-markdown-code-segment-selected: var(--dsw-static-kimi-bubble-dark);
   --dsw-alias-markdown-code-segment-unselected: var(--dsw-static-kimi-surface-dark);
-  --dsw-alias-markdown-inline-code: var(--dsw-static-kimi-bubble-dark);
+  --dsw-alias-markdown-inline-code: rgba(255, 255, 255, 0.07);
   --dsw-alias-markdown-placeholder: var(--dsw-static-kimi-surface-dark);
+  --dsw-alias-markdown-quote-bar: rgba(255, 255, 255, 0.16);
   --dsw-alias-markdown-tag: var(--dsw-static-kimi-elevated-dark);
   --dsw-alias-scrollbar-bg-l1: var(--dsw-static-neutral-700);
   --dsw-alias-scrollbar-bg-l2: var(--dsw-static-neutral-600);
