@@ -4,7 +4,7 @@
   gap: 10px;
   margin: 6px 0;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--dsw-radius-md);
   border: 0.5px solid var(--dsw-alias-border-l2);
   background-color: var(--dsw-alias-bg-layer-1);
 }
@@ -30,7 +30,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-xs);
   background-color: var(--dsw-alias-card-fill);
   color: var(--dsw-alias-label-primary);
   flex-shrink: 0;
@@ -66,7 +66,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--dsw-radius-sm);
   border: 0.5px solid var(--dsw-alias-border-l1);
   background-color: var(--dsw-alias-card-fill);
   text-align: left;
@@ -103,6 +103,7 @@
   width: 7px;
   height: 7px;
   border-radius: 999px;
+  corner-shape: round;
   flex-shrink: 0;
   background-color: var(--dsw-alias-state-idle-primary);
 }
@@ -136,7 +137,7 @@
 
 .roleBadge {
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-xs);
   background-color: var(--dsw-alias-card-fill-hover);
   color: var(--dsw-alias-label-primary);
   font-size: 11px;
@@ -150,7 +151,7 @@
 
 .presetBadge {
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-xs);
   background-color: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-tertiary);
   font-size: 11px;

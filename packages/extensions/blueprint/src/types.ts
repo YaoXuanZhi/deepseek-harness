@@ -299,6 +299,7 @@ export interface UpdatePlacementInput {
   readonly heightMode?: BlueprintPlacementHeightMode
   readonly pixelHeight?: number
   readonly reflow?: boolean
+  readonly interaction?: 'move' | 'resize'
 }
 
 /** Request payload for creating an Automation (disabled by default unless `enabled: true`). */

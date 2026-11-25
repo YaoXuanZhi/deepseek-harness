@@ -57,7 +57,14 @@ import type {
   UpdateWidgetInput,
 } from './types.ts'
 import {
+  autoArrangeCanvasPlacements,
+  CANVAS_COL_WIDTH_PX,
+  CANVAS_DESIGN_WIDTH_PX,
+  CANVAS_GRID_COLS,
+  CANVAS_GRID_GAP_PX,
+  CANVAS_ROW_HEIGHT_PX,
   matchesCronMinute,
+  moveCanvasPlacement,
   normalizeBlueprintId,
   reflowCanvasPlacements,
   resolveCanvasGridRect,
@@ -66,6 +73,14 @@ import {
   validateRuntimePayload,
   validateWidgetSource,
 } from './validation.ts'
+
+export {
+  CANVAS_COL_WIDTH_PX,
+  CANVAS_DESIGN_WIDTH_PX,
+  CANVAS_GRID_COLS,
+  CANVAS_GRID_GAP_PX,
+  CANVAS_ROW_HEIGHT_PX,
+}
 
 export type * from './types.ts'
 export { BlueprintError, type BlueprintErrorCode } from './error.ts'
@@ -1178,10 +1193,10 @@ export class BlueprintService extends TypertRemoteService {
         height: input.freeRect.height ?? 320,
       }
       : (existingPlacement?.freeRect ?? {
-        x: rect.x * 84,
-        y: rect.y * 44,
-        width: Math.max(240, rect.w * 80),
-        height: Math.max(180, rect.h * 36),
+        x: rect.x * (CANVAS_COL_WIDTH_PX + CANVAS_GRID_GAP_PX),
+        y: rect.y * (CANVAS_ROW_HEIGHT_PX + CANVAS_GRID_GAP_PX),
+        width: rect.w * CANVAS_COL_WIDTH_PX + (rect.w - 1) * CANVAS_GRID_GAP_PX,
+        height: rect.h * CANVAS_ROW_HEIGHT_PX + (rect.h - 1) * CANVAS_GRID_GAP_PX,
       })
 
     const resolvedHeightMode = input.heightMode ?? existingPlacement?.heightMode
@@ -1237,7 +1252,7 @@ export class BlueprintService extends TypertRemoteService {
       ? Math.min(3_200, Math.max(160, Math.round(input.pixelHeight)))
       : (input.heightMode === 'auto' || input.heightMode === 'fill' ? undefined : target.pixelHeight)
 
-    if (input.reflow === true) {
+    if (input.reflow === true || input.interaction === 'move' || input.interaction === 'resize') {
       const requestedRect = {
         x: input.rect?.x ?? target.rect.x,
         y: input.rect?.y ?? target.rect.y,
@@ -1253,7 +1268,9 @@ export class BlueprintService extends TypertRemoteService {
         ...(nextHeightMode === undefined ? {} : { heightMode: nextHeightMode }),
         ...(nextPixelHeight === undefined ? {} : { pixelHeight: nextPixelHeight }),
       }
-      const reflowed = reflowCanvasPlacements(canvas.placements, candidateTile)
+      const reflowed = input.interaction === 'move'
+        ? moveCanvasPlacement(canvas.placements, candidateTile)
+        : reflowCanvasPlacements(canvas.placements, candidateTile)
       const next: BlueprintCanvasRecord = {
         ...canvas,
         placements: reflowed,
@@ -1313,6 +1330,26 @@ export class BlueprintService extends TypertRemoteService {
     const next: BlueprintCanvasRecord = {
       ...canvas,
       placements: nextPlacements,
+      updatedAt: new Date().toISOString(),
+    }
+    this.canvases.set(cid, next)
+    await this.persistAndNotify()
+    return next
+  }
+
+  /**
+   * Auto-pack all Widget tiles on a Canvas into compact non-overlapping 12-column rows (`自动排列`).
+   * @param canvasId - Target Canvas identifier.
+   * @returns Repacked Canvas record.
+   */
+  @Remote('arrangeCanvas')
+  async arrangeCanvas(canvasId: string): Promise<BlueprintCanvasRecord> {
+    const cid = brandString<BlueprintCanvasId>(canvasId.trim())
+    const canvas = this.canvases.get(cid)
+    if (!canvas) throw new RemoteError('blueprint/not-found', `Canvas "${canvasId}" not found`, {})
+    const next: BlueprintCanvasRecord = {
+      ...canvas,
+      placements: autoArrangeCanvasPlacements(canvas.placements),
       updatedAt: new Date().toISOString(),
     }
     this.canvases.set(cid, next)

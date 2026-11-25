@@ -157,6 +157,18 @@ describe('@deepseek-ai/dsh-blueprint', () => {
     expect(resetAuto.placements.find(p => p.widgetId === widget2.id)?.heightMode).toBe('auto')
     expect(resetAuto.placements.find(p => p.widgetId === widget2.id)?.pixelHeight).toBeUndefined()
 
+    const moved = await ctx.blueprint.updatePlacement({
+      canvasId: canvas.id,
+      placementId: widget.id,
+      rect: { x: 0, y: 0, w: 6, h: 8 },
+      interaction: 'move',
+    })
+    expect(moved.placements.find(p => p.widgetId === widget.id)?.rect).toEqual({ x: 0, y: 0, w: 6, h: 8 })
+    expect(moved.placements.find(p => p.widgetId === widget2.id)?.rect.y).toBe(8)
+
+    const arranged = await ctx.blueprint.arrangeCanvas(canvas.id)
+    expect(arranged.placements.find(p => p.widgetId === widget.id)?.rect.y).toBe(0)
+
     expect(matchesCronMinute('30 9 * * 1-5', new Date('2026-11-24T09:30:00'))).toBe(true)
     expect(matchesCronMinute('30 9 * * 1-5', new Date('2026-11-24T09:31:00'))).toBe(false)
 

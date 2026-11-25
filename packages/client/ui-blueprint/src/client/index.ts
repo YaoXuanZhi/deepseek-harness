@@ -64,11 +64,12 @@ declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
   }
 }
 
-/** Layout patch accepted by `updatePlacementLayout` for interactive Dashboard resizing. */
+/** Layout patch accepted by `updatePlacementLayout` for interactive Dashboard resizing and moving. */
 export interface BlueprintPlacementLayoutPatch {
   readonly rect?: Partial<BlueprintGridRect> | undefined
   readonly heightMode?: BlueprintPlacementHeightMode | undefined
   readonly pixelHeight?: number | undefined
+  readonly interaction?: 'move' | 'resize' | undefined
 }
 
 /** Shared injected face across Blueprint tool views, fences, and Dashboard pages. */
@@ -91,6 +92,8 @@ export interface BlueprintViewInjected {
   readonly placeWidgetOnCanvas: (canvasId: string, widgetId: string) => Promise<void>
   readonly resizePlacementWidth: (canvasId: string, placementId: string, w: number) => Promise<void>
   readonly updatePlacementLayout: (canvasId: string, placementId: string, patch: BlueprintPlacementLayoutPatch) => Promise<void>
+  readonly arrangeCanvasById: (canvasId: string) => Promise<void>
+  readonly refreshCatalog: () => Promise<void>
   readonly setCanvasZoom: (canvasId: string, zoom: number) => Promise<void>
   readonly removePlacementFromCanvas: (canvasId: string, placementId: string) => Promise<void>
   readonly deleteCanvasById: (canvasId: string) => Promise<void>
@@ -242,6 +245,7 @@ export function apply(ctx: ClientContext): void {
       ...(patch.rect === undefined ? {} : { rect: patch.rect }),
       ...(patch.heightMode === undefined ? {} : { heightMode: patch.heightMode }),
       ...(patch.pixelHeight === undefined ? {} : { pixelHeight: patch.pixelHeight }),
+      ...(patch.interaction === undefined ? {} : { interaction: patch.interaction }),
       reflow: true,
     }).catch(() => {})
     await controller.refresh()
@@ -263,7 +267,9 @@ export function apply(ctx: ClientContext): void {
     togglePinWindow: (widgetId, title, fallbackHtml) => pinController.togglePin(widgetId, title, fallbackHtml),
     pinWidgetToDashboard: async (widgetId, title, openAside = true) => {
       const snap = controller.source.getSnapshot().catalog
-      let targetCanvasId = snap.canvases[0]?.id
+      const firstCanvas = snap.canvases[0]
+      let targetCanvasId = firstCanvas?.id
+      const isEmptyCanvas = !firstCanvas || firstCanvas.placements.length === 0
       if (!targetCanvasId) {
         const created = await ctx.remote.blueprint.createCanvas({ title: t('nav.dashboards') })
         if (created.ok) targetCanvasId = created.value.id
@@ -273,7 +279,7 @@ export function apply(ctx: ClientContext): void {
           canvasId: targetCanvasId,
           widgetId,
           titleOverride: title,
-          rect: { w: 12, h: 12 },
+          rect: { w: isEmptyCanvas ? 12 : 6, h: 10 },
           heightMode: 'auto',
         }).catch(() => {})
         await controller.refresh()
@@ -290,18 +296,25 @@ export function apply(ctx: ClientContext): void {
       return res.ok ? res.value.id : undefined
     },
     placeWidgetOnCanvas: async (canvasId, widgetId) => {
+      const targetCanvas = controller.source.getSnapshot().catalog.canvases.find(c => c.id === canvasId)
+      const isEmptyCanvas = !targetCanvas || targetCanvas.placements.length === 0
       await ctx.remote.blueprint.placeWidget({
         canvasId,
         widgetId,
-        rect: { w: 12, h: 12 },
+        rect: { w: isEmptyCanvas ? 12 : 6, h: 10 },
         heightMode: 'auto',
       }).catch(() => {})
       await controller.refresh()
     },
     resizePlacementWidth: async (canvasId, placementId, w) => {
-      await updatePlacementLayout(canvasId, placementId, { rect: { w } })
+      await updatePlacementLayout(canvasId, placementId, { rect: { w }, interaction: 'resize' })
     },
     updatePlacementLayout,
+    arrangeCanvasById: async (canvasId) => {
+      await ctx.remote.blueprint.arrangeCanvas(canvasId).catch(() => {})
+      await controller.refresh()
+    },
+    refreshCatalog: () => controller.refresh(),
     setCanvasZoom: async (canvasId, zoom) => {
       const current = controller.source.getSnapshot().catalog.canvases.find(c => c.id === canvasId)?.viewState
       await ctx.remote.blueprint.setCanvasViewState({

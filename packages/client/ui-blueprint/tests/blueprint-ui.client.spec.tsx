@@ -222,6 +222,8 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
 
     cleanup()
     const updatePlacementLayout = vi.fn().mockResolvedValue(undefined)
+    const arrangeCanvasById = vi.fn().mockResolvedValue(undefined)
+    const refreshCatalog = vi.fn().mockResolvedValue(undefined)
     const setCanvasZoom = vi.fn().mockResolvedValue(undefined)
     const openDashboardInMain = vi.fn()
     const stateWithDetail: BlueprintClientState = {
@@ -261,18 +263,21 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
           placeWidgetOnCanvas: async () => { },
           resizePlacementWidth: async () => { },
           updatePlacementLayout,
+          arrangeCanvasById,
+          refreshCatalog,
           setCanvasZoom,
           removePlacementFromCanvas: async () => { },
           deleteCanvasById: async () => { },
+          runAutomationNow: async () => { },
           t: makeT(),
         } as Partial<BlueprintRightTabProps> as BlueprintRightTabProps)}
       />,
     )
 
-    expect(screen.getAllByText('核心指标卡').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByRole('tab', { name: '经营分析看板' })).toBeTruthy()
     const boardIframe = screen.getByTitle('核心指标卡') as HTMLIFrameElement
 
-    // Auto-fit tall widget height beyond 720px without clipping in Right Sidebar
+    // Auto-height row sync on Kimi 1092px 12-column design canvas (960px -> ceil((960+12)/44) = 23 rows)
     window.dispatchEvent(new MessageEvent('message', {
       source: boardIframe.contentWindow,
       data: {
@@ -283,37 +288,47 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
       },
     }))
     await waitFor(() => {
-      expect(boardIframe.parentElement?.style.height).toBe('960px')
+      expect(updatePlacementLayout).toHaveBeenCalledWith('board-1', 'tile-1', {
+        rect: { h: 23 },
+        heightMode: 'auto',
+        interaction: 'resize',
+      })
     })
 
-    // Toggle Fill panel, Toggle Width, Zoom In, and Open Full Page
-    fireEvent.click(screen.getByRole('button', { name: '铺满面板' }))
-    expect(updatePlacementLayout).toHaveBeenCalledWith('board-1', 'tile-1', { heightMode: 'fill' })
+    // Auto-arrange button, Board More menu -> Open full page, and Enlarge modal
+    fireEvent.click(screen.getByRole('button', { name: '自动排列' }))
+    expect(arrangeCanvasById).toHaveBeenCalledWith('board-1')
 
-    fireEvent.click(screen.getByRole('button', { name: '通栏（12 列）' }))
-    expect(updatePlacementLayout).toHaveBeenCalledWith('board-1', 'tile-1', { rect: { w: 12 } })
-
-    fireEvent.click(screen.getByRole('button', { name: '放大显示比例' }))
-    expect(setCanvasZoom).toHaveBeenCalledWith('board-1', 1.1)
-
-    fireEvent.click(screen.getByRole('button', { name: '全屏看板页' }))
+    const moreBtns = screen.getAllByRole('button', { name: '更多操作' })
+    const firstMoreBtn = moreBtns[0]
+    if (!firstMoreBtn) throw new Error('Expected board more actions button')
+    fireEvent.click(firstMoreBtn)
+    fireEvent.click(screen.getByRole('menuitem', { name: '打开全屏看板页' }))
     expect(openDashboardInMain).toHaveBeenCalledTimes(1)
 
-    // Interactive bottom drag resize + double-click reset to auto height
-    const separators = screen.getAllByRole('separator', { name: /拖拽调节显示区域/ })
-    const bottomHandle = separators[0]
-    if (!bottomHandle) throw new Error('Expected bottom resize handle')
-    fireEvent.pointerDown(bottomHandle, { button: 0, pointerId: 7, clientX: 200, clientY: 300 })
-    fireEvent.pointerMove(bottomHandle, { pointerId: 7, clientX: 200, clientY: 480 })
-    fireEvent.pointerUp(bottomHandle, { pointerId: 7, clientX: 200, clientY: 480 })
+    fireEvent.click(screen.getByRole('button', { name: '放大查看' }))
+    expect(screen.getByRole('dialog', { name: '核心指标卡' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }))
+    expect(screen.queryByRole('dialog', { name: '核心指标卡' })).toBeNull()
+
+    // Interactive SE corner drag resize + double-click reset to auto height
+    const separators = screen.getAllByRole('separator', { name: /拖拽调节尺寸/ })
+    const seHandle = separators[2]
+    if (!seHandle) throw new Error('Expected SE resize handle')
+    fireEvent.pointerDown(seHandle, { button: 0, pointerId: 7, clientX: 200, clientY: 200 })
+    fireEvent.pointerMove(seHandle, { pointerId: 7, clientX: 400, clientY: 380 })
+    fireEvent.pointerUp(seHandle, { pointerId: 7, clientX: 400, clientY: 380 })
     expect(updatePlacementLayout).toHaveBeenCalledWith(
       'board-1',
       'tile-1',
-      expect.objectContaining({ heightMode: 'fixed' }),
+      expect.objectContaining({ heightMode: 'fixed', interaction: 'resize' }),
     )
 
-    fireEvent.doubleClick(bottomHandle)
-    expect(updatePlacementLayout).toHaveBeenCalledWith('board-1', 'tile-1', { heightMode: 'auto' })
+    fireEvent.doubleClick(seHandle)
+    expect(updatePlacementLayout).toHaveBeenCalledWith('board-1', 'tile-1', {
+      heightMode: 'auto',
+      interaction: 'resize',
+    })
 
     cleanup()
     render(
@@ -333,14 +348,17 @@ describe('@deepseek-ai/dsh-client-ui-blueprint', () => {
           placeWidgetOnCanvas: async () => { },
           resizePlacementWidth: async () => { },
           updatePlacementLayout: async () => { },
+          arrangeCanvasById: async () => { },
+          refreshCatalog: async () => { },
           setCanvasZoom: async () => { },
           removePlacementFromCanvas: async () => { },
           deleteCanvasById: async () => { },
+          runAutomationNow: async () => { },
           t: makeT(),
         } as Partial<BlueprintMainDashboardProps> as BlueprintMainDashboardProps)}
       />,
     )
-    expect(screen.getAllByText('核心指标卡').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByRole('tab', { name: '经营分析看板' })).toBeTruthy()
   })
 
   it('accumulates settled Turn Widget & Automation cards and renders BlueprintTurnTail inline', () => {

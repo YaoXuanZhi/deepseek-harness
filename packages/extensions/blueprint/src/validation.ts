@@ -96,6 +96,17 @@ export function gridRectsOverlap(a: BlueprintGridRect, b: BlueprintGridRect): bo
 
 /** Maximum row span supported for a Canvas grid tile (`120` rows). */
 export const MAX_CANVAS_GRID_HEIGHT = 120
+/** Number of columns in the Kimi Work Canvas design grid (`12`). */
+export const CANVAS_GRID_COLS = 12
+/** Width in design pixels of a single Canvas grid column (`80px`). */
+export const CANVAS_COL_WIDTH_PX = 80
+/** Height in design pixels of a single Canvas grid row (`32px`). */
+export const CANVAS_ROW_HEIGHT_PX = 32
+/** Gap in design pixels between adjacent Canvas grid tracks (`12px`). */
+export const CANVAS_GRID_GAP_PX = 12
+/** Full 12-column Canvas design width in pixels (`12 * 80 + 11 * 12 = 1092px`). */
+export const CANVAS_DESIGN_WIDTH_PX =
+  CANVAS_GRID_COLS * CANVAS_COL_WIDTH_PX + (CANVAS_GRID_COLS - 1) * CANVAS_GRID_GAP_PX
 
 /**
  * Validate or auto-place a 12-column Canvas grid rectangle (`x: 0..11`, `w: 2..12`, `h: 2..120`).
@@ -195,6 +206,66 @@ export function reflowCanvasPlacements(
   }
 
   return placements.map(item => settled.get(item.id) ?? item)
+}
+
+/**
+ * Move `target` to its requested `(x, y)` on the 12-column grid, pushing down any
+ * colliding sibling tiles and compacting vertical gaps upward.
+ * @param placements - Current Canvas placements in display order.
+ * @param target - Placement being moved, carrying its requested `rect`.
+ * @returns Updated placements in original array order.
+ */
+export function moveCanvasPlacement(
+  placements: readonly BlueprintCanvasPlacement[],
+  target: BlueprintCanvasPlacement,
+): BlueprintCanvasPlacement[] {
+  const pushed = reflowCanvasPlacements(placements, target)
+  const sorted = [...pushed].sort((a, b) => (a.rect.y - b.rect.y) || (a.rect.x - b.rect.x))
+  const compacted = new Map<string, BlueprintCanvasPlacement>()
+
+  for (const item of sorted) {
+    if (item.id === target.id) {
+      compacted.set(item.id, item)
+      continue
+    }
+    let nextY = item.rect.y
+    while (nextY > 0) {
+      const probe: BlueprintGridRect = { ...item.rect, y: nextY - 1 }
+      const hitsPlaced = [...compacted.values()].some(p => gridRectsOverlap(probe, p.rect))
+      const hitsTarget = gridRectsOverlap(probe, pushed.find(p => p.id === target.id)?.rect ?? probe)
+      if (hitsPlaced || hitsTarget) break
+      nextY -= 1
+    }
+    compacted.set(item.id, { ...item, rect: { ...item.rect, y: nextY } })
+  }
+
+  return placements.map(item => compacted.get(item.id) ?? item)
+}
+
+/**
+ * Auto-pack all placements on a 12-column Canvas into compact non-overlapping rows (`自动排列`).
+ * @param placements - Current Canvas placements.
+ * @returns Repacked placements preserving original array order.
+ */
+export function autoArrangeCanvasPlacements(
+  placements: readonly BlueprintCanvasPlacement[],
+): BlueprintCanvasPlacement[] {
+  const ordered = [...placements].sort(
+    (a, b) => (a.rect.y - b.rect.y) || (a.rect.x - b.rect.x) || ((a.zIndex ?? 0) - (b.zIndex ?? 0)),
+  )
+  const packed: BlueprintCanvasPlacement[] = []
+  const byId = new Map<string, BlueprintCanvasPlacement>()
+
+  for (const item of ordered) {
+    const w = Math.min(CANVAS_GRID_COLS, Math.max(2, Math.round(item.rect.w)))
+    const h = Math.min(MAX_CANVAS_GRID_HEIGHT, Math.max(2, Math.round(item.rect.h)))
+    const nextRect = resolveCanvasGridRect(packed, { w, h })
+    const nextItem: BlueprintCanvasPlacement = { ...item, rect: nextRect }
+    packed.push(nextItem)
+    byId.set(item.id, nextItem)
+  }
+
+  return placements.map(item => byId.get(item.id) ?? item)
 }
 
 function schemaTypesCompatible(sourceType: string | undefined, targetType: string | undefined): boolean {

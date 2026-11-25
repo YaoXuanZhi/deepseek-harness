@@ -29,6 +29,8 @@ export interface BlueprintWidgetFrameProps {
   readonly status?: BlueprintWidgetStatus | undefined
   readonly theme: 'light' | 'dark'
   readonly locale: string
+  readonly chromeless?: boolean | undefined
+  readonly refreshToken?: number | undefined
   readonly fillHeight?: boolean | undefined
   readonly explicitHeight?: number | undefined
   readonly minAutoHeight?: number | undefined
@@ -45,6 +47,7 @@ export interface BlueprintWidgetFrameProps {
   readonly onTogglePinWindow?: (() => void) | undefined
   readonly onPinToDashboard?: (() => void) | undefined
   readonly onOpenInRight?: (() => void) | undefined
+  readonly onExpandWidget?: (() => void) | undefined
   readonly t: (key: BlueprintLocaleKey, params?: Record<string, string | number>) => string
 }
 
@@ -69,6 +72,8 @@ export function BlueprintWidgetFrame({
   status,
   theme,
   locale,
+  chromeless,
+  refreshToken,
   fillHeight,
   explicitHeight,
   minAutoHeight,
@@ -85,11 +90,14 @@ export function BlueprintWidgetFrame({
   onTogglePinWindow,
   onPinToDashboard,
   onOpenInRight,
+  onExpandWidget,
   t,
 }: BlueprintWidgetFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const measuredCallbackRef = useRef(onMeasuredHeight)
   measuredCallbackRef.current = onMeasuredHeight
+  const expandCallbackRef = useRef(onExpandWidget)
+  expandCallbackRef.current = onExpandWidget
 
   const minH = minAutoHeight ?? DEFAULT_MIN_HEIGHT
   const maxH = maxAutoHeight ?? DEFAULT_MAX_HEIGHT
@@ -179,6 +187,8 @@ export function BlueprintWidgetFrame({
         })
       } else if (msg.type === 'openCanvas' && onOpenInRight) {
         onOpenInRight()
+      } else if (msg.type === 'expand') {
+        expandCallbackRef.current?.()
       }
     }
     window.addEventListener('message', onMessage)
@@ -212,72 +222,80 @@ export function BlueprintWidgetFrame({
   const isPositioned = fillHeight === true || explicitHeight !== undefined
 
   return (
-    <div className={clsx(css.shell, fillHeight && css.shellTile)}>
-      <div className={css.toolbar}>
-        <div className={css.titleGroup}>
-          <span className={css.title}>{displayTitle}</span>
-          {statusText !== null && (
-            <span
-              className={clsx(
-                css.statusPill,
-                effectiveStatus === 'error' && css.statusError,
-                (effectiveStatus === 'degraded' || effectiveStatus === 'needs_input') && css.statusWarn,
-              )}
-            >
-              {statusText}
-            </span>
-          )}
+    <div
+      className={clsx(
+        css.shell,
+        fillHeight && css.shellTile,
+        chromeless && css.shellChromeless,
+      )}
+    >
+      {chromeless !== true && (
+        <div className={css.toolbar}>
+          <div className={css.titleGroup}>
+            <span className={css.title}>{displayTitle}</span>
+            {statusText !== null && (
+              <span
+                className={clsx(
+                  css.statusPill,
+                  effectiveStatus === 'error' && css.statusError,
+                  (effectiveStatus === 'degraded' || effectiveStatus === 'needs_input') && css.statusWarn,
+                )}
+              >
+                {statusText}
+              </span>
+            )}
+          </div>
+          <div className={css.actions}>
+            {tileControls !== undefined && (
+              <button
+                type="button"
+                className={clsx(css.actionBtn, tileControls.heightMode === 'fill' && css.actionBtnActive)}
+                onClick={tileControls.onToggleHeightMode}
+              >
+                {tileControls.heightMode === 'auto' ? t('canvas.heightFill') : t('canvas.heightAuto')}
+              </button>
+            )}
+            {tileControls?.showWidthToggle === true && (
+              <button
+                type="button"
+                className={css.actionBtn}
+                onClick={tileControls.onToggleWidth}
+              >
+                {tileControls.isFullWidth ? t('canvas.resizeCompact') : t('canvas.resizeFull')}
+              </button>
+            )}
+            {onTogglePinWindow !== undefined && (
+              <button
+                type="button"
+                className={clsx(css.actionBtn, isPinned && css.actionBtnActive)}
+                aria-pressed={isPinned === true}
+                onClick={onTogglePinWindow}
+              >
+                {isPinned ? t('widget.unpinWindow') : t('widget.pinWindow')}
+              </button>
+            )}
+            {onPinToDashboard !== undefined && (
+              <button type="button" className={css.actionBtn} onClick={onPinToDashboard}>
+                {t('widget.pinToDashboard')}
+              </button>
+            )}
+            {onOpenInRight !== undefined && (
+              <button type="button" className={css.actionBtn} onClick={onOpenInRight}>
+                {t('widget.openInRight')}
+              </button>
+            )}
+            {tileControls !== undefined && (
+              <button
+                type="button"
+                className={css.actionBtn}
+                onClick={tileControls.onRemoveTile}
+              >
+                {t('canvas.removeTile')}
+              </button>
+            )}
+          </div>
         </div>
-        <div className={css.actions}>
-          {tileControls !== undefined && (
-            <button
-              type="button"
-              className={clsx(css.actionBtn, tileControls.heightMode === 'fill' && css.actionBtnActive)}
-              onClick={tileControls.onToggleHeightMode}
-            >
-              {tileControls.heightMode === 'auto' ? t('canvas.heightFill') : t('canvas.heightAuto')}
-            </button>
-          )}
-          {tileControls?.showWidthToggle === true && (
-            <button
-              type="button"
-              className={css.actionBtn}
-              onClick={tileControls.onToggleWidth}
-            >
-              {tileControls.isFullWidth ? t('canvas.resizeCompact') : t('canvas.resizeFull')}
-            </button>
-          )}
-          {onTogglePinWindow !== undefined && (
-            <button
-              type="button"
-              className={clsx(css.actionBtn, isPinned && css.actionBtnActive)}
-              aria-pressed={isPinned === true}
-              onClick={onTogglePinWindow}
-            >
-              {isPinned ? t('widget.unpinWindow') : t('widget.pinWindow')}
-            </button>
-          )}
-          {onPinToDashboard !== undefined && (
-            <button type="button" className={css.actionBtn} onClick={onPinToDashboard}>
-              {t('widget.pinToDashboard')}
-            </button>
-          )}
-          {onOpenInRight !== undefined && (
-            <button type="button" className={css.actionBtn} onClick={onOpenInRight}>
-              {t('widget.openInRight')}
-            </button>
-          )}
-          {tileControls !== undefined && (
-            <button
-              type="button"
-              className={css.actionBtn}
-              onClick={tileControls.onRemoveTile}
-            >
-              {t('canvas.removeTile')}
-            </button>
-          )}
-        </div>
-      </div>
+      )}
       {html !== undefined && html.trim() !== '' ? (
         <div
           className={clsx(css.frameViewport, fillHeight && css.frameViewportFill)}
@@ -288,6 +306,7 @@ export function BlueprintWidgetFrame({
           }
         >
           <iframe
+            key={refreshToken === undefined ? widgetId : `${widgetId}:${String(refreshToken)}`}
             ref={iframeRef}
             title={displayTitle}
             sandbox="allow-scripts"

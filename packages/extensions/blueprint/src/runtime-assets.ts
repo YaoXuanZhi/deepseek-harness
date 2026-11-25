@@ -497,6 +497,7 @@ export function assembleWidgetHtml(record: BlueprintWidgetRecord, rawHtml: strin
         statusListeners = statusListeners.filter(function (fn) { return fn !== cb; });
       };
     },
+    expand: function () { post('expand', {}); },
     resize: function (height) { measureAndReport(height); }
   };
 
@@ -626,6 +627,7 @@ export function assembleWidgetHtml(record: BlueprintWidgetRecord, rawHtml: strin
   window.DaimonWidget = api;
   window.DaimonCanvas = {
     files: filesApi,
+    expand: function () { post('expand', {}); },
     openDashboard: function (canvasId) {
       post('openCanvas', { canvasId: canvasId || null });
     }
