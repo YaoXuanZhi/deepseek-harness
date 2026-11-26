@@ -1,0 +1,52 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/llm/llm-acp/README.md
+/:
+  en: 5522ad03b804bfbd
+  zh: 8d0072924ebbf371
+/deepseek-ai-dsh-llm-acp:
+  en: b7b4ba8349d1a3e8
+  zh: 6f21daf9adff5c7d
+/deepseek-ai-dsh-llm-acp/summary:
+  en: cc78265a2d74aa46
+  zh: e92a2d38052cf7f0
+/deepseek-ai-dsh-llm-acp/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-llm-acp/use-this-package:
+  en: 1b0c901f25115836
+  zh: 580349099aa61daf
+/deepseek-ai-dsh-llm-acp/use-this-package/subscription-authentication-and-model-probing:
+  en: 78f10db5363c0784
+  zh: f3b612584a20b6a7
+/deepseek-ai-dsh-llm-acp/understand-the-implementation:
+  en: 6e5b3702724c6994
+  zh: 65a34fe45e14ecaf
+/deepseek-ai-dsh-llm-acp/further-exploration:
+  en: 834334701bbc0cb8
+  zh: 4dc1390ab5925333
+/deepseek-ai-dsh-llm-acp/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-llm-acp/model-experience/acp-prompt-and-tool-bridge-projection:
+  en: 121b1d0592eb09b5
+  zh: 5ee7079f1b455cf5
+/deepseek-ai-dsh-llm-acp/model-experience/acp-prompt-and-tool-bridge-projection/what-the-model-sees:
+  en: f672c050b72a36c4
+  zh: b41c8b3c32d0b948
+/deepseek-ai-dsh-llm-acp/model-experience/acp-prompt-and-tool-bridge-projection/what-the-model-sees/fallback-tool-call-instructions-for-non-http-mcp-acp-agents:
+  en: eabb28f6bbc3ede8
+  zh: aac7c0493a7dd346
+/deepseek-ai-dsh-llm-acp/model-experience/acp-prompt-and-tool-bridge-projection/token-effect:
+  en: b83b0f33b777af0c
+  zh: 9a284d41dbb11293
+/deepseek-ai-dsh-llm-acp/model-experience/acp-prompt-and-tool-bridge-projection/kv-cache-effect:
+  en: f45aa3a1c8937c13
+  zh: 4296cd20beb0738d
+/deepseek-ai-dsh-llm-acp/known-limitations-and-deferred-work:
+  en: fddf87de79141fdc
+  zh: 338a484831c336e8
+/deepseek-ai-dsh-llm-acp/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 3bb0c20c93f16f98

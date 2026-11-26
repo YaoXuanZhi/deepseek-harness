@@ -226,6 +226,14 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'permissionPresets/catalog': 'owner-only', // owner permission presets
   'permissionPresets/set': 'owner-only', // owner switches the sandbox and approval preset; a viewer may not call it at any tier
   'llm/discoverModels': 'owner-only', // owner discovers models
+  'llmAcp/catalog': 'owner-only', // owner ACP model providers
+  'llmAcp/launchTerminalLogin': 'owner-only', // owner ACP terminal login
+  'llmAcp/prepareRegistryAgent': 'owner-only', // owner ACP Registry installation
+  'llmAcp/probeProvider': 'owner-only', // owner ACP model probing
+  'llmAcp/removeProvider': 'owner-only', // owner ACP model providers
+  'llmAcp/searchRegistry': 'owner-only', // owner ACP Registry search
+  'llmAcp/startAuth': 'owner-only', // owner ACP OAuth sign-in
+  'llmAcp/upsertProvider': 'owner-only', // owner ACP model providers
   'web/listProviders': 'owner-only', // owner web search and fetch settings
   'agentPresets/list': 'owner-only', // owner agent presets
   'agentPresets/read': 'owner-only', // owner agent presets
@@ -240,6 +248,7 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'schedule/list': 'owner-only', // owner schedules
   'schedule/run': 'owner-only', // owner schedules
   'schedule/view': 'owner-only', // owner schedules
+  'blueprint/arrangeCanvas': 'owner-only', // owner Blueprint dashboards
   'blueprint/catalog': 'owner-only', // owner Blueprint catalog
   'blueprint/createCanvas': 'owner-only', // owner Blueprint dashboards
   'blueprint/createFileResourceUrl': 'owner-only', // owner Blueprint file resources

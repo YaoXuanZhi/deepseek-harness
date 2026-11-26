@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Proveedores de modelos ACP",
+    "description": "Conecta agentes ACP de suscripción desde ACP Registry o comandos locales como rutas LLM nativas."
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "ACP モデルプロバイダー",
+    "description": "ACP Registry やローカルのサブスクリプション ACP エージェントをネイティブ LLM ルートとして接続します。"
+  }
+}

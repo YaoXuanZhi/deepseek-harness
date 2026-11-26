@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Provedores de modelos ACP",
+    "description": "Conecta agentes ACP por assinatura do ACP Registry ou locais como rotas nativas de LLM."
+  }
+}

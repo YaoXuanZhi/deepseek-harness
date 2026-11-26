@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "ACP-Modellanbieter",
+    "description": "Bindet ACP-Registry- und lokale Abonnement-ACP-Agenten als native LLM-Routen ein."
+  }
+}

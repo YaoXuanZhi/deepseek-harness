@@ -337,7 +337,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'llm',
     title: 'LLM adapter registry',
     mode: 'seam',
-    implementations: ['llm-deepseek', 'llm-pi-ai', 'llm-replay'],
+    implementations: ['llm-deepseek', 'llm-pi-ai', 'llm-acp', 'llm-replay'],
     consumers: ['agent-loop', 'compaction-basic'],
     note: 'Adapters register provider implementations; the loop and compaction call the provider-neutral stream service.',
   },
@@ -1078,6 +1078,13 @@ const SERVICE_ROLES: ServiceRole[] = [
     mode: 'core',
     consumers: ['tool-blueprint'],
     note: 'Owns durable Widget, 12-column and free-layout Canvas, Automation, and schema-validated Binding state, serves sandboxed Widget HTML over webServer, and publishes Remote operations to browser dashboards.',
+  },
+  {
+    key: 'llmAcp',
+    pkg: 'llm-acp',
+    title: 'ACP model provider registry and auth coordinator',
+    mode: 'core',
+    note: 'Searches and prepares ACP Registry agents under $DSH_HOME/acp-registry, coordinates OAuth URL and terminal subscription logins, and registers ACP model routes onto ctx.llm with loopback HTTP MCP tool capture.',
   },
   {
     key: 'liveshareShares',

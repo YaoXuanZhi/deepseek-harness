@@ -2832,6 +2832,61 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'llmAcp',
+    summary: 'Host service managing ACP Registry / local subscription ACP providers and registering their routes onto `ctx.llm`.',
+    description: 'Host service managing ACP Registry / local subscription ACP providers and registering their routes onto `ctx.llm`.',
+    methods: [
+      {
+        signature: '@Remote(\'catalog\') catalog(): Promise<AcpLlmCatalog>',
+        description: 'Read the current ACP LLM provider catalog and active authentication flows.',
+        parameters: [],
+        returns: 'Redacted catalog snapshot.',
+      },
+      {
+        signature: '@Remote(\'searchRegistry\') async searchRegistry( request: { readonly query?: string; readonly forceRefresh?: boolean }, ): Promise<AcpRegistrySearchResult>',
+        description: 'Search the official ACP Registry for agents supported on the current host platform.',
+        parameters: [{ name: 'request', description: 'Search query substring and optional cache bypass flag.' }],
+        returns: 'Matching ACP Registry agents.',
+      },
+      {
+        signature: '@Remote(\'prepareRegistryAgent\') async prepareRegistryAgent(request: { readonly agentId: string readonly distribution?: AcpRegistryDistributionKind }): Promise<AcpRegistryPrepareResult>',
+        description: 'Download and prepare an ACP Registry agent inside `$DSH_HOME/acp-registry`.',
+        parameters: [{ name: 'request', description: 'Target `agentId` and optional `distribution` preference.' }],
+        returns: 'Preparation receipt with resolved command and arguments.',
+      },
+      {
+        signature: '@Remote(\'upsertProvider\') async upsertProvider(input: UpsertAcpProviderInput): Promise<AcpLlmProviderView>',
+        description: 'Create or update an ACP LLM provider (from ACP Registry or a local executable command), optionally auto-probing its models and auth methods.',
+        parameters: [{ name: 'input', description: 'Provider configuration and write-only secrets.' }],
+        returns: 'Updated redacted provider view.',
+      },
+      {
+        signature: '@Remote(\'removeProvider\') async removeProvider(providerId: string): Promise<{ readonly deleted: boolean }>',
+        description: 'Remove a configured ACP LLM provider and its stored secrets.',
+        parameters: [{ name: 'providerId', description: 'Provider route identifier to delete.' }],
+        returns: 'Deletion flag.',
+      },
+      {
+        signature: '@Remote(\'probeProvider\') async probeProvider(providerId: string): Promise<AcpProbeOutcome>',
+        description: 'Probe an ACP provider via `initialize` + `session/new` to discover or refresh its subscription models, reasoning efforts, and authentication methods.',
+        parameters: [{ name: 'providerId', description: 'Provider route identifier.' }],
+        returns: 'Refreshed provider view.',
+      },
+      {
+        signature: '@Remote(\'startAuth\') async startAuth(request: { readonly providerId: string readonly methodId?: string }): Promise<AcpAuthFlowView>',
+        description: 'Start an interactive ACP `authenticate` OAuth/agent flow. Returns immediately once either an OAuth URL is emitted (`status: \'url_required\'`) or fast authentication completes (`status: \'succeeded\'`), and automatically probes models upon completion.',
+        parameters: [{ name: 'request', description: 'Target `providerId` and optional `methodId`.' }],
+        returns: 'Current auth flow view.',
+      },
+      {
+        signature: '@Remote(\'launchTerminalLogin\') launchTerminalLogin(request: { readonly providerId: string readonly commandLine?: string }): Promise<{ readonly commandLine: string }>',
+        description: 'Open an interactive OS terminal window running the ACP agent\'s subscription login command with the provider\'s configured environment variables.',
+        parameters: [{ name: 'request', description: 'Target `providerId` and optional `commandLine` override.' }],
+        returns: 'Launched command line string.',
+      },
+    ],
+  },
+  {
     key: 'lsp',
     summary: 'The LSP capability seam (`ctx.lsp`).',
     description: 'The LSP capability seam (`ctx.lsp`). Owns provider registration/selection and normalized query execution; exposes exactly the four operations and no protocol escape hatch.',
@@ -6196,6 +6251,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'reloads', description: 'Replaced plugins and their module locations.' }],
   },
   {
+    name: 'llm-acp/changed',
+    mode: 'emit',
+    signature: '\'llm-acp/changed\'(revision: number): void',
+    summary: 'Emitted whenever ACP LLM providers, Registry preparations, or auth flows change.',
+    description: 'Emitted whenever ACP LLM providers, Registry preparations, or auth flows change.',
+    parameters: [{ name: 'revision', description: 'Monotonic catalog revision counter.' }],
+  },
+  {
     name: 'llm-pi-ai/request-headers',
     mode: 'waterfall',
     signature: '\'llm-pi-ai/request-headers\'(request: PiAiRequestHeaderContext, headers: Headers, next: () => Headers): Headers',
@@ -6678,6 +6741,70 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AccountWallet',
     declaration: 'export interface AccountWallet {\n    readonly currency: \'CNY\' | \'USD\';\n    readonly balance: string;\n}',
+  },
+  {
+    name: 'AcpAdvertisedAuthMethod',
+    declaration: 'export interface AcpAdvertisedAuthMethod {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n    readonly type: AcpAuthMethodType;\n    readonly terminalCommand?: string;\n    readonly envVarNames?: readonly string[];\n    readonly link?: string;\n}',
+  },
+  {
+    name: 'AcpAuthFlowView',
+    declaration: 'export interface AcpAuthFlowView {\n    readonly flowId: string;\n    readonly providerId: AcpLlmProviderId;\n    readonly methodId: string;\n    readonly status: \'pending\' | \'url_required\' | \'succeeded\' | \'failed\';\n    readonly authUrl?: string;\n    readonly message?: string;\n    readonly startedAt: string;\n}',
+  },
+  {
+    name: 'AcpAuthMethodType',
+    declaration: 'export type AcpAuthMethodType = \'agent\' | \'terminal\' | \'env_var\';',
+  },
+  {
+    name: 'AcpLlmCatalog',
+    declaration: 'export interface AcpLlmCatalog {\n    readonly revision: number;\n    readonly providers: readonly AcpLlmProviderView[];\n    readonly authFlows: readonly AcpAuthFlowView[];\n}',
+  },
+  {
+    name: 'AcpLlmProviderId',
+    declaration: 'export type AcpLlmProviderId = Branded<\'AcpLlmProviderId\'>;',
+  },
+  {
+    name: 'AcpLlmProviderView',
+    declaration: 'export interface AcpLlmProviderView {\n    readonly id: AcpLlmProviderId;\n    readonly displayName: string;\n    readonly enabled: boolean;\n    readonly source: AcpProviderSourceKind;\n    readonly registryAgentId?: string;\n    readonly registryVersion?: string;\n    readonly distribution?: AcpRegistryDistributionKind;\n    readonly command: string;\n    readonly args: readonly string[];\n    readonly env: readonly AcpProviderEnvView[];\n    readonly models: readonly AcpProviderModelEntry[];\n    readonly reasoningEfforts: readonly AcpReasoningOption[];\n    readonly modelConfigOptionId?: string;\n    readonly reasoningConfigOptionId?: string;\n    readonly supportsHttpMcp?: boolean;\n    readonly supportsImages?: boolean;\n    readonly authMethods: readonly AcpAdvertisedAuthMethod[];\n    readonly status: \'ready\' | \'auth_required\' | \'unprobed\' | \'error\';\n    readonly statusMessage?: string;\n    readonly lastProbedAt?: string;\n}',
+  },
+  {
+    name: 'AcpProbeOutcome',
+    declaration: 'export interface AcpProbeOutcome {\n    readonly provider: AcpLlmProviderView;\n}',
+  },
+  {
+    name: 'AcpProviderEnvInput',
+    declaration: 'export interface AcpProviderEnvInput {\n    readonly name: string;\n    readonly value?: string;\n    readonly secret?: boolean;\n    readonly keepExistingSecret?: boolean;\n}',
+  },
+  {
+    name: 'AcpProviderEnvView',
+    declaration: 'export interface AcpProviderEnvView {\n    readonly name: string;\n    readonly value: string;\n    readonly secret: boolean;\n    readonly configured: boolean;\n}',
+  },
+  {
+    name: 'AcpProviderModelEntry',
+    declaration: 'export interface AcpProviderModelEntry {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n    readonly contextWindow?: number;\n    readonly maxTokens?: number;\n    readonly inputModalities?: readonly (\'text\' | \'image\')[];\n}',
+  },
+  {
+    name: 'AcpProviderSourceKind',
+    declaration: 'export type AcpProviderSourceKind = \'registry\' | \'local\';',
+  },
+  {
+    name: 'AcpReasoningOption',
+    declaration: 'export interface AcpReasoningOption {\n    readonly id: string;\n    readonly name: string;\n}',
+  },
+  {
+    name: 'AcpRegistryAgentSummary',
+    declaration: 'export interface AcpRegistryAgentSummary {\n    readonly id: string;\n    readonly name: string;\n    readonly version: string;\n    readonly description: string;\n    readonly authors: readonly string[];\n    readonly license?: string;\n    readonly website?: string;\n    readonly repository?: string;\n    readonly icon?: string;\n    readonly distribution: AcpRegistryDistributionKind;\n    readonly availableDistributions: readonly AcpRegistryDistributionKind[];\n    readonly prepared: boolean;\n}',
+  },
+  {
+    name: 'AcpRegistryDistributionKind',
+    declaration: 'export type AcpRegistryDistributionKind = \'binary\' | \'npx\' | \'uvx\';',
+  },
+  {
+    name: 'AcpRegistryPrepareResult',
+    declaration: 'export interface AcpRegistryPrepareResult {\n    readonly agentId: string;\n    readonly name: string;\n    readonly version: string;\n    readonly distribution: AcpRegistryDistributionKind;\n    readonly command: string;\n    readonly args: readonly string[];\n}',
+  },
+  {
+    name: 'AcpRegistrySearchResult',
+    declaration: 'export interface AcpRegistrySearchResult {\n    readonly registryVersion: string;\n    readonly agents: readonly AcpRegistryAgentSummary[];\n}',
   },
   {
     name: 'ActionCardDecision',
@@ -11994,6 +12121,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'UpdateWidgetInput',
     declaration: 'export interface UpdateWidgetInput {\n    readonly id: string;\n    readonly title?: string;\n    readonly description?: string;\n    readonly html?: string;\n    readonly files?: Readonly<Record<string, string>>;\n    readonly slots?: Readonly<Record<string, BlueprintPortDeclaration>>;\n    readonly events?: Readonly<Record<string, BlueprintPortDeclaration>>;\n    readonly latestData?: Readonly<Record<string, JsonValue>>;\n    readonly status?: BlueprintWidgetStatus;\n    readonly statusMessage?: string;\n}',
+  },
+  {
+    name: 'UpsertAcpProviderInput',
+    declaration: 'export interface UpsertAcpProviderInput {\n    readonly id: string;\n    readonly displayName: string;\n    readonly enabled?: boolean;\n    readonly source: AcpProviderSourceKind;\n    readonly registryAgentId?: string;\n    readonly distribution?: AcpRegistryDistributionKind;\n    readonly command?: string;\n    readonly args?: readonly string[];\n    readonly env?: readonly AcpProviderEnvInput[];\n    readonly models?: readonly AcpProviderModelEntry[];\n    readonly autoProbe?: boolean;\n}',
   },
   {
     name: 'UpstreamSkillSelection',

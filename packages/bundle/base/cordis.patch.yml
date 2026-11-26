@@ -139,6 +139,12 @@
     - id: llm-pi-ai
       name: '@deepseek-ai/dsh-llm-pi-ai'
 
+    # ACP model provider adapter, mounted dormant until configured in Settings
+    # or `cordis.patch.yml`: bridges ACP Registry and local subscription ACP
+    # agents into `ctx.llm` while keeping tool execution inside the DSH loop.
+    - id: llm-acp
+      name: '@deepseek-ai/dsh-llm-acp'
+
     - id: session-persistence-jsonl
       name: '@deepseek-ai/dsh-session-persistence-jsonl'
       config:

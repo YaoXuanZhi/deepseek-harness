@@ -2291,6 +2291,75 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-linear -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-llm-acp -->
+<a id="deepseek-aidsh-llm-acp"></a>
+
+## `@deepseek-ai/dsh-llm-acp`
+
+- `inject`: `llm`
+- `source`: [`packages/llm/llm-acp/src/index.ts:80`](../packages/llm/llm-acp/src/index.ts)
+
+```ts config-catalog
+/** Configuration schema of `@deepseek-ai/dsh-llm-acp`. */
+export interface AcpLlmConfig {
+  /** Root directory storing ACP Registry packages, probe state, and isolated workspaces. */
+  registryRoot?: string
+  /** Official or mirror ACP Registry JSON URL. */
+  registryUrl?: string
+  /** Maximum duration in milliseconds when installing Registry packages. */
+  installTimeoutMs?: number
+  /** Maximum duration in milliseconds when probing an ACP agent via `initialize` + `session/new`. */
+  probeTimeoutMs?: number
+  /** Optional declaratively configured ACP providers merged with UI-managed providers. */
+  providers?: Record<string, DeclarativeAcpProviderConfig>
+}
+
+/** Declarative configuration entry for one ACP provider in `cordis.patch.yml`. */
+export interface DeclarativeAcpProviderConfig {
+  /** Human-readable provider label displayed in Settings and model pickers. */
+  readonly displayName?: string
+  /** Whether this ACP provider route is registered on `ctx.llm` (default `true`). */
+  readonly enabled?: boolean
+  /** Provider origin kind (`registry` or `local`). */
+  readonly source?: AcpProviderSourceKind
+  /** Official ACP Registry agent id when `source === 'registry'`. */
+  readonly registryAgentId?: string
+  /** Preferred distribution mechanism when `source === 'registry'`. */
+  readonly distribution?: AcpRegistryDistributionKind
+  /** Executable command used to launch the ACP agent. */
+  readonly command?: string
+  /** Command-line arguments passed to `command`. */
+  readonly args?: string[]
+  /** Plaintext environment variables passed to the ACP agent process. */
+  readonly env?: Record<string, string>
+  /** Optional explicit model entries exposed before or alongside probing. */
+  readonly models?: AcpProviderModelEntry[]
+}
+
+/** Origin of a configured ACP LLM provider (`registry` or `local`). */
+export type AcpProviderSourceKind = 'registry' | 'local'
+
+/** Distribution mechanism advertised by an official ACP Registry entry. */
+export type AcpRegistryDistributionKind = 'binary' | 'npx' | 'uvx'
+
+/** One model entry exposed by an ACP LLM provider. */
+export interface AcpProviderModelEntry {
+  /** Model identifier passed to `session/set_config_option` (`model`). */
+  readonly id: string
+  /** Human-readable display name shown in selectors. */
+  readonly name: string
+  /** Optional description reported by the ACP agent. */
+  readonly description?: string
+  /** Optional context window in tokens (defaults to `200_000` when undisclosed). */
+  readonly contextWindow?: number
+  /** Optional maximum output tokens (defaults to `32_768` when undisclosed). */
+  readonly maxTokens?: number
+  /** Accepted input modalities (`['text']` or `['text', 'image']`). */
+  readonly inputModalities?: readonly ('text' | 'image')[]
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-llm-acp -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-llm-deepseek-account -->
 <a id="deepseek-aidsh-llm-deepseek-account"></a>
 
@@ -5722,6 +5791,7 @@ export interface Config {
 | `@deepseek-ai/dsh-client-ui-session-panel` | — | [`packages/client/ui-session-panel/src/index.ts`](../packages/client/ui-session-panel/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-session-status` | `remoteAccess` · `sessions` · `sessionPersistence` · `typert` | [`packages/client/ui-session-status/src/index.ts`](../packages/client/ui-session-status/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings` | — | [`packages/client/ui-settings/src/index.ts`](../packages/client/ui-settings/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-settings-acp` | — | [`packages/client/ui-settings-acp/src/index.ts`](../packages/client/ui-settings-acp/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-agent-loop` | — | [`packages/client/ui-settings-agent-loop/src/index.ts`](../packages/client/ui-settings-agent-loop/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-general` | — | [`packages/client/ui-settings-general/src/index.ts`](../packages/client/ui-settings-general/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-session-log` | — | [`packages/client/ui-settings-session-log/src/index.ts`](../packages/client/ui-settings-session-log/src/index.ts) |

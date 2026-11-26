@@ -1199,6 +1199,76 @@ Types: [FileAttachmentRef](attachment.md) · [ImageAttachmentRef](attachment.md)
 
 Source: [`packages/llm/llm/src/index.ts`](../../packages/llm/llm/src/index.ts)
 
+<a id="ctxllmacp--acpllmservice"></a>
+
+### `ctx.llmAcp` — `AcpLlmService`
+
+Host service managing ACP Registry / local subscription ACP providers and registering their routes onto `ctx.llm`.
+
+```ts cordis-catalog
+/**
+ * Read the current ACP LLM provider catalog and active authentication flows.
+ * @returns Redacted catalog snapshot.
+ */
+@Remote('catalog') catalog(): Promise<AcpLlmCatalog>
+
+/**
+ * Search the official ACP Registry for agents supported on the current host platform.
+ * @param request - Search query substring and optional cache bypass flag.
+ * @returns Matching ACP Registry agents.
+ */
+@Remote('searchRegistry') async searchRegistry( request: { readonly query?: string; readonly forceRefresh?: boolean }, ): Promise<AcpRegistrySearchResult>
+
+/**
+ * Download and prepare an ACP Registry agent inside `$DSH_HOME/acp-registry`.
+ * @param request - Target `agentId` and optional `distribution` preference.
+ * @returns Preparation receipt with resolved command and arguments.
+ */
+@Remote('prepareRegistryAgent') async prepareRegistryAgent(request: { readonly agentId: string readonly distribution?: AcpRegistryDistributionKind }): Promise<AcpRegistryPrepareResult>
+
+/**
+ * Create or update an ACP LLM provider (from ACP Registry or a local executable command),
+ * optionally auto-probing its models and auth methods.
+ * @param input - Provider configuration and write-only secrets.
+ * @returns Updated redacted provider view.
+ */
+@Remote('upsertProvider') async upsertProvider(input: UpsertAcpProviderInput): Promise<AcpLlmProviderView>
+
+/**
+ * Remove a configured ACP LLM provider and its stored secrets.
+ * @param providerId - Provider route identifier to delete.
+ * @returns Deletion flag.
+ */
+@Remote('removeProvider') async removeProvider(providerId: string): Promise<{ readonly deleted: boolean }>
+
+/**
+ * Probe an ACP provider via `initialize` + `session/new` to discover or refresh
+ * its subscription models, reasoning efforts, and authentication methods.
+ * @param providerId - Provider route identifier.
+ * @returns Refreshed provider view.
+ */
+@Remote('probeProvider') async probeProvider(providerId: string): Promise<AcpProbeOutcome>
+
+/**
+ * Start an interactive ACP `authenticate` OAuth/agent flow. Returns immediately once
+ * either an OAuth URL is emitted (`status: 'url_required'`) or fast authentication
+ * completes (`status: 'succeeded'`), and automatically probes models upon completion.
+ * @param request - Target `providerId` and optional `methodId`.
+ * @returns Current auth flow view.
+ */
+@Remote('startAuth') async startAuth(request: { readonly providerId: string readonly methodId?: string }): Promise<AcpAuthFlowView>
+
+/**
+ * Open an interactive OS terminal window running the ACP agent's subscription login
+ * command with the provider's configured environment variables.
+ * @param request - Target `providerId` and optional `commandLine` override.
+ * @returns Launched command line string.
+ */
+@Remote('launchTerminalLogin') launchTerminalLogin(request: { readonly providerId: string readonly commandLine?: string }): Promise<{ readonly commandLine: string }>
+```
+
+Source: [`packages/llm/llm-acp/src/index.ts`](../../packages/llm/llm-acp/src/index.ts)
+
 <a id="llm-events"></a>
 
 ### `llm/*` events
@@ -1264,6 +1334,27 @@ Waterfall around every streaming model call (retry, replay, routing). Bound to t
 ```
 
 Source: [`packages/llm/llm/src/index.ts`](../../packages/llm/llm/src/index.ts)
+
+<a id="llm-acp-events"></a>
+
+### `llm-acp/*` events
+
+<a id="llm-acpchanged--emit"></a>
+
+#### `llm-acp/changed` — emit
+
+Emitted whenever ACP LLM providers, Registry preparations, or auth flows change.
+
+```ts cordis-catalog
+/**
+ * Emitted whenever ACP LLM providers, Registry preparations, or auth flows change.
+ * @param revision - Monotonic catalog revision counter.
+ * @mode emit
+ */
+'llm-acp/changed'(revision: number): void
+```
+
+Source: [`packages/llm/llm-acp/src/types.ts`](../../packages/llm/llm-acp/src/types.ts)
 
 <a id="llm-pi-ai-events"></a>
 

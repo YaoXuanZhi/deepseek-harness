@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Interface des paramètres ACP",
+    "description": "Recherche et installe des agents ACP Registry, authentifie les abonnements et gère les fournisseurs ACP locaux."
+  }
+}

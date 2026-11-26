@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "ACP 模型设置界面",
+    "description": "在模型设置页中提供 ACP Registry 搜索下载、OAuth/终端订阅登录与本地 ACP 模型管理。"
+  }
+}

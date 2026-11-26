@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "ACP モデル設定 UI",
+    "description": "モデル設定で ACP Registry の検索・導入、OAuth／ターミナル認証、ローカル ACP プロバイダーを管理します。"
+  }
+}

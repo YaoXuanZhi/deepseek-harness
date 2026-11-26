@@ -65,6 +65,9 @@
       "path": "../../llm/llm"
     },
     {
+      "path": "../../llm/llm-acp"
+    },
+    {
       "path": "../../preset/agent-preset-registry"
     },
     {

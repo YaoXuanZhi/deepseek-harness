@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Fournisseurs de modèles ACP",
+    "description": "Connecte les agents ACP par abonnement depuis ACP Registry ou en local comme routes LLM natives."
+  }
+}

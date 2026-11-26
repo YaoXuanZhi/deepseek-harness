@@ -15,6 +15,7 @@ import goalsRemote from '@deepseek-ai/dsh-goal/remote'
 import scheduleRemote from '@deepseek-ai/dsh-schedule/remote'
 import blueprintRemote from '@deepseek-ai/dsh-blueprint/remote'
 import llmRemote from '@deepseek-ai/dsh-llm/remote'
+import llmAcpRemote from '@deepseek-ai/dsh-llm-acp/remote'
 import dynamicRemote from '@deepseek-ai/dsh-cordis-host-runner/remote'
 import pluginManagerRemote from '@deepseek-ai/dsh-plugin-manager/remote'
 import mcpManagerRemote from '@deepseek-ai/dsh-mcp-manager/remote'
@@ -77,6 +78,9 @@ export type * from '@deepseek-ai/dsh-blueprint/client'
 export type {} from '@deepseek-ai/dsh-blueprint/types'
 export type {} from '@deepseek-ai/dsh-office-kit/remote'
 export type {} from '@deepseek-ai/dsh-llm/remote'
+export type {} from '@deepseek-ai/dsh-llm-acp/remote'
+export type * from '@deepseek-ai/dsh-llm-acp/client'
+export type {} from '@deepseek-ai/dsh-llm-acp/types'
 export type {} from '@deepseek-ai/dsh-host-plugin-inventory/remote'
 export type {} from '@deepseek-ai/dsh-message-feedback/remote'
 export type {} from '@deepseek-ai/dsh-permission-presets/remote'
@@ -210,7 +214,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
   try {
     for (const contribution of [
       productAnalyticsRemote, agentPresetsRemote, commandsRemote, agentTeamsRemote, settingsControllerRemote, accountRemote,
-      goalsRemote, llmRemote, dynamicRemote, scheduleRemote, blueprintRemote,
+      goalsRemote, llmRemote, llmAcpRemote, dynamicRemote, scheduleRemote, blueprintRemote,
       pluginInventoryRemote, pluginManagerRemote, mcpManagerRemote, pluginMarketRemote, pluginRegistryProbeRemote,
       connectorAccountsRemote,
       toolResultsRemote,
