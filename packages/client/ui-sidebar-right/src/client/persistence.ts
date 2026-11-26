@@ -1,7 +1,10 @@
 /** Validated current-layout snapshots; undo history belongs to the live window. */
 import { z } from 'zod'
-import { applyOp, createIdMinter, EMPTY_HISTORY, planSettle, replay, type LayoutState } from '@deepseek-ai/dsh-client-ui-dockkit'
-import { isContentTab } from './contract/seed.ts'
+import {
+  applyOp, createIdMinter, dockPaneIds, EMPTY_HISTORY, findPaneContentTab,
+  getPane, getTab, planPlaceTab, planSettle, replay, type LayoutState,
+} from '@deepseek-ai/dsh-client-ui-dockkit'
+import { isContentTab, pageAddress } from './contract/seed.ts'
 import type { SurfaceState } from './stores.ts'
 
 /** Persistence namespace shared by scoped stores and startup discovery. */
@@ -56,14 +59,41 @@ function validateReferences(value: z.infer<typeof surface>): void {
     || layout.nodes[layout.activePaneId]?.kind !== 'pane') reject()
 }
 
+function collapseSplitPanes(layout: LayoutState, minted: number): LayoutState {
+  const [primary, ...secondary] = dockPaneIds(layout)
+  /* v8 ignore next -- validated layouts always hold at least one docked pane. */
+  if (primary === undefined || secondary.length === 0) return layout
+  const activePane = getPane(layout, layout.activePaneId)
+  let activeTabId = activePane.host === 'dock' ? activePane.activeTabId : undefined
+  let merged = layout
+  for (const paneId of secondary) {
+    for (const tabId of [...getPane(merged, paneId).tabs]) {
+      const tab = getTab(merged, tabId)
+      const duplicate = tab.contentId === pageAddress(tab.kind)
+        ? findPaneContentTab(merged, primary, tab.contentId, tab.kind)
+        : undefined
+      if (duplicate !== undefined) {
+        if (activeTabId === tabId) activeTabId = duplicate
+        merged = applyOp(merged, { type: 'closeTab', tabId }).state
+      } else {
+        merged = replay(merged, planPlaceTab(merged, tabId, primary, getPane(merged, primary).tabs.length))
+      }
+    }
+  }
+  merged = replay(merged, planSettle(merged, createIdMinter(minted).next))
+  return activeTabId !== undefined
+    ? applyOp(merged, { type: 'focusTab', tabId: activeTabId }).state
+    : applyOp(merged, { type: 'focusPane', paneId: activePane.id }).state
+}
+
 function restoredLayout(layout: LayoutState, minted: number): LayoutState {
   const transient = Object.values(layout.tabs).filter(isContentTab)
-  if (transient.length === 0) return layout
+  if (transient.length === 0 && dockPaneIds(layout).length <= 1) return layout
   let restored = layout
   for (const tab of transient) restored = applyOp(restored, { type: 'closeTab', tabId: tab.id }).state
-  restored = replay(restored, planSettle(restored, createIdMinter(minted).next))
-  const root = restored.nodes[restored.rootId]
-  if (root?.kind === 'pane' && root.tabs.length === 0) {
+  if (transient.length > 0) restored = replay(restored, planSettle(restored, createIdMinter(minted).next))
+  restored = collapseSplitPanes(restored, minted)
+  if (getPane(restored, restored.rootId).tabs.length === 0) {
     return { ...restored, expanded: false, mode: 'push' }
   }
   return restored

@@ -29,7 +29,7 @@
  * signal, actions — is read through the slot-owned useTabInfo hook. The Tab
  * domain follows each session's store commits, including sessions off screen.
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode, RefObject } from 'react'
 import type { ContextMenuTarget } from '@deepseek-ai/dsh-client-ui-context-menu/client'
 import type { ShortcutCatalogEntry } from '@deepseek-ai/dsh-client-shortcuts/client'
@@ -38,9 +38,8 @@ import type {
   HostObservable, InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
 } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '../contract/slots.ts'
-import type { DockIntents, DockMode, DockSurfaceProps, FloatRect, TabId, TabRecord, TabRenderer } from '@deepseek-ai/dsh-client-ui-dockkit'
-import { canSplit, dockPaneIds, DockLayout, findPaneContentTab } from '@deepseek-ai/dsh-client-ui-dockkit'
-import type { HalvesFit, LayoutState, PaneId } from '@deepseek-ai/dsh-client-ui-dockkit'
+import type { DockIntents, DockMode, DockSurfaceProps, FloatRect, LayoutState, PaneId, TabId, TabRecord, TabRenderer } from '@deepseek-ai/dsh-client-ui-dockkit'
+import { DockLayout, findPaneContentTab } from '@deepseek-ai/dsh-client-ui-dockkit'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { GUIDE_KIND, isContentTab, pageAddress } from '../contract/seed.ts'
 import { dockLabels } from '../labels.ts'
@@ -80,14 +79,6 @@ export interface SidebarRightInjected {
    * composition changes.
    */
   readonly syncPresentation: (presentation: SidebarRightPresentation) => void
-  /**
-   * Record this seat's room rule for `ctx.sidebarRight`'s splits, replacing its previous one.
-   *
-   * The docking kit measures its panes after it renders; the seat forwards each
-   * reading, and the service applies it when it splits this seat's Session.
-   * @param canSplitPane - whether two working halves of a docked pane would fit; unmeasured panes fit.
-   */
-  readonly measureRoom: (canSplitPane: (paneId: PaneId) => boolean) => void
   /**
    * Record whether the frame width this seat renders at presents an expanded panel fullscreen automatically.
    *
@@ -152,8 +143,6 @@ interface PanelProps {
   readonly autoFullscreen: boolean
   readonly active: boolean
   readonly retainTab: RightbarSeatProps['retainTab']
-  /** Receives the kit's room-rule readings for the service's `split`. */
-  readonly reportRoom: (fits: ReadonlyMap<PaneId, HalvesFit>) => void
 }
 
 /** The guide tab one pane holds, if any: a pane holds at most one. */
@@ -314,7 +303,7 @@ function PanelChrome({ sessionId, fullscreen, actions, t, shortcuts, toggleFulls
  * anchored to the frame's right edge and slid off it while collapsed.
  */
 function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<HTMLDivElement> }): ReactNode {
-  const { sessionId, surface, actions, t, openTab, width, reportRoom, fullscreen, panelRef } = panel
+  const { sessionId, surface, actions, t, openTab, width, fullscreen, panelRef } = panel
   const { expanded } = surface.layout
   const types = panel.useTabTypes(value => value)
   const flash = panel.useFlash(value => value)
@@ -358,7 +347,8 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
       <div className={css.panelBody}>
         <DockLayout
           state={surface.layout}
-          canSplit={canSplit(surface.layout) && dockPaneIds(surface.layout).length < 2}
+          canSplit={false}
+          hideSplitWhenBlocked
           dropZones="horizontal"
           minPaneFraction={0.2}
           canAddTab={paneId => guideIn(surface.layout, paneId) === undefined}
@@ -374,7 +364,6 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
             sessionId={sessionId} fullscreen={fullscreen} actions={actions} t={t}
             shortcuts={panel.shortcuts} toggleFullscreen={panel.toggleFullscreen}
           />}
-          onRoom={reportRoom}
         />
       </div>
     </div>
@@ -389,7 +378,7 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
  * measured and the automatic fullscreen rule of its frame width.
  */
 export function RightbarSeat({
-  sessionId, width, viewportWidth, canShow, useStore, actions, t, renderSlot, syncPresentation, measureRoom, reportAutoFullscreen,
+  sessionId, width, viewportWidth, canShow, useStore, actions, t, renderSlot, syncPresentation, reportAutoFullscreen,
   openTab, closeTab, useContextMenu, useContextMenuTarget, useTabTypes, useTabNavigation, occurrence, retainTab,
   active, useShortcuts, splitPane, toggleFullscreen, useFlash,
 }: RightbarSeatProps): ReactNode {
@@ -404,10 +393,6 @@ export function RightbarSeat({
   const autoFullscreen = viewportWidth < 768
   const fullscreen = autoFullscreen || surface?.layout.mode === 'fullscreen'
   const panelRef = useRef<HTMLDivElement | null>(null)
-  // A reading never re-renders anything: the service applies it when it splits.
-  const reportRoom = useCallback((fits: ReadonlyMap<PaneId, HalvesFit>): void => {
-    measureRoom(paneId => fits.get(paneId)?.row !== false)
-  }, [measureRoom])
   const track = shown && !autoFullscreen
 
   useEffect(() => {
@@ -462,7 +447,7 @@ export function RightbarSeat({
   const panel: PanelProps = {
     sessionId, actions, t, renderSlot, surface, openTab, closeTab, getTabTriggerProps, tabMenuOpen, useTabTypes, useTabNavigation,
     useStore, useFlash, occurrence,
-    fullscreen, autoFullscreen, reportRoom, active, retainTab, shortcuts, splitPane, toggleFullscreen,
+    fullscreen, autoFullscreen, active, retainTab, shortcuts, splitPane, toggleFullscreen,
   }
   return <SidebarPanel {...panel} width={width} panelRef={panelRef} />
 }

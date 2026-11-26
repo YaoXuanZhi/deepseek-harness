@@ -212,18 +212,15 @@ it('keeps duplicate Session Tabs independent and preserves a body through dockin
   h.runtime.ctx.effect(() => h.controller.registerCloseHandler('shared', close))
   act(() => { h.controller.openTab('shared', { replaceTab: tab.id, revealIfOpened: false }) })
   expect(close).not.toHaveBeenCalled()
-  let otherPane: PaneId | undefined
-  act(() => { otherPane = h.controller.split() })
   fireEvent.click(body)
   expect(h.controller.active()?.id).toBe(tab.id)
-  expect(otherPane).toBeDefined()
-  act(() => { h.controller.openTab('shared', { paneId: otherPane!, revealIfOpened: false, preferNewPane: true }) })
+  act(() => { h.controller.float(tab.id) })
+  act(() => { h.controller.openTab('shared', { revealIfOpened: false, preferNewPane: true }) })
   expect(h.controller.tabsIn(SESSION).filter(tab => tab.kind === 'shared')).toHaveLength(2)
   const duplicate = h.controller.active()!
   expect(duplicate.id).not.toBe(tab.id)
   expect(document.querySelectorAll('[data-page-input]')).toHaveLength(2)
   act(() => { h.controller.close(duplicate.id) })
-  act(() => { h.controller.float(tab.id) })
   expect(document.querySelector('[data-page-input]')).toBe(body)
   expect(body.closest('[data-dockkit-host]')).toBe(cell)
   const floating = h.controller.focusedTarget(body)!
@@ -280,16 +277,11 @@ it('never detaches a retained page\'s embedded element across floating replaceme
   const target = h.controller.focusedTarget(element(h.view.container, `[data-tab-body="${floating.id}"]`))!
   act(() => { h.controller.openTabFromTarget('files', target) })
   kept()
-  // The page itself floats, docks, and moves to another pane.
+  // The page itself floats, docks, and survives collapsing and reopening.
   act(() => { h.controller.float(page.id) })
   kept()
   const float = h.layout().floats.find(id => getPane(h.layout(), id).tabs.includes(page.id))!
   act(() => { h.controller.dock(float) })
-  kept()
-  let other: PaneId | undefined
-  act(() => { other = h.controller.split() })
-  act(() => { h.actions.placeTab(SESSION, page.id, other!, 0) })
-  expect(getPane(h.layout(), other!).tabs).toContain(page.id)
   kept()
   act(() => { h.controller.toggleExpanded() })
   expect(h.layout().expanded).toBe(false)
@@ -460,13 +452,15 @@ describe('RightbarSeat presentation', () => {
     expect(closeWindow).toHaveBeenCalledOnce()
   })
 
-  it('focuses the new pane after splitting replaces the focused pane DOM', async () => {
+  it('keeps focus on the single docked pane when split is requested', async () => {
     const h = await mountSeat()
     h.open()
-    element(h.view.container, '[data-dockkit-tab]').focus()
+    const tab = element(h.view.container, '[data-dockkit-tab]')
+    tab.focus()
     let created: PaneId | undefined
     act(() => { created = h.controller.split() })
-    expect(document.activeElement?.getAttribute('data-dockkit-pane')).toBe(created)
+    expect(created).toBeUndefined()
+    expect(document.activeElement).toBe(tab)
   })
 
   it('focuses the dock on expansion while leaving floating focus alone on collapse', async () => {
@@ -611,8 +605,7 @@ describe('RightbarSeat presentation', () => {
     expect(h.layout().tabs[preview.id]).toBeUndefined()
     expect(Object.keys(h.layout().tabs)).toEqual([guide.id])
     expect(h.view.container.querySelectorAll('[data-dockkit-tab-close]')).toHaveLength(0)
-    act(() => { h.controller.split() })
-    expect(Object.values(h.layout().tabs).map(tab => tab.kind)).toEqual(['guide', 'text'])
+    expect(h.controller.split()).toBeUndefined()
   })
 
   it('offers close for a floating tab while the docked pane keeps its sole tab', async () => {
@@ -672,13 +665,12 @@ describe('RightbarSeat presentation', () => {
     expect(panel.hasAttribute('data-sidebar-right-opening')).toBe(false)
   })
 
-  it('resizes the split panel without writing an inherited slide distance', async () => {
+  it('resizes the single docked panel without writing an inherited slide distance', async () => {
     const h = await mountSeat()
     h.open()
     const panel = element(h.view.container, '[data-sidebar-right-panel]')
     fireEvent.transitionEnd(element(panel, "[data-dockkit-host='dock']"))
-    act(() => { h.actions.splitPane(SESSION) })
-    expect(h.view.container.querySelectorAll('[data-dockkit-pane]')).toHaveLength(2)
+    expect(h.view.container.querySelectorAll('[data-dockkit-pane]')).toHaveLength(1)
     for (const width of [518, 620]) {
       h.view.update({ width, viewportWidth: 1440, canShow: true })
       expect(panel.style.getPropertyValue('--dsh-sidebar-right-panel-width')).toBe(`${width}px`)
@@ -1028,28 +1020,20 @@ describe('slot-owned useTabInfo', () => {
     expect(document.querySelector('[data-dockkit-tab-menu]')).toBeNull()
   })
 
-  it('keeps the current binding in the disabled split tooltip when it changes or is cleared', async () => {
+  it('hides the split control in the single right sidebar and shows add-tab only while no guide is open', async () => {
     const h = await mountSeat()
-    const split: ShortcutCatalogEntry = {
-      id: 'pane.split' as ShortcutCommandId, label: 'Split', aliases: [],
-      binding: { code: 'Backslash', modifiers: ['meta'] }, modified: false, conflicts: [], issue: null,
-      keys: ['⌘', '\\'], aria: 'Meta+\\',
-    }
-    act(() => {
-      h.runtime.ctx.locale.setLocale('en')
-      h.catalog.set([split])
-      h.controller.toggleExpanded()
-      h.controller.split()
-    })
-    const anchor = element(h.view.container, '[data-dockkit-split-button]').parentElement!
-    fireEvent.keyDown(anchor, { key: 'Tab' })
-    fireEvent.focus(anchor)
-    expect(document.querySelector('[role="tooltip"]')?.getAttribute('aria-label')).toBe('Two panes is the limit ⌘ \\')
-    act(() => { h.catalog.set([{ ...split, binding: { code: 'KeyG', modifiers: ['control'] },
-      keys: ['Ctrl', '+', 'G'], aria: 'Control+G' }]) })
-    expect(document.querySelector('[role="tooltip"]')?.getAttribute('aria-label')).toBe('Two panes is the limit Ctrl + G')
-    act(() => { h.catalog.set([{ ...split, binding: null, keys: [], aria: undefined }]) })
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe('Two panes is the limit')
+    const tab = h.open()
+    expect(h.view.container.querySelectorAll('[data-dockkit-split-button]')).toHaveLength(0)
+    expect(h.view.container.querySelectorAll('[data-dockkit-split-control]')).toHaveLength(0)
+    const stored = h.instance.getSnapshot()
+    act(() => { expect(h.controller.split()).toBeUndefined() })
+    expect(h.instance.getSnapshot()).toBe(stored)
+    const add = element(h.view.container, '[data-dockkit-add-tab]')
+    fireEvent.click(add)
+    const paneId = dockPaneIds(h.layout())[0]!
+    expect(getPane(h.layout(), paneId).tabs.filter(id => h.layout().tabs[id]?.kind === 'guide')).toHaveLength(1)
+    expect(h.view.container.querySelector('[data-dockkit-add-tab]')).toBeNull()
+    expect(h.layout().tabs[tab.id]).toBeDefined()
   })
 
   it('advertises configured pane and page-close controls', async () => {
@@ -1064,35 +1048,6 @@ describe('slot-owned useTabInfo', () => {
     for (const selector of ['[data-sidebar-right-mode]', '[data-sidebar-right-toggle]']) {
       expect(element(h.view.container, selector).getAttribute('aria-keyshortcuts')).toBe('Control+G')
     }
-  })
-
-  it('explains the two-pane limit and adds a guide only to a pane without one', async () => {
-    const h = await mountSeat()
-    // Expanding first seeds the left pane's guide; only the right pane will lack one.
-    act(() => { h.controller.toggleExpanded() })
-    h.open()
-    const splitButtons = () => h.view.container.querySelectorAll<HTMLButtonElement>('[data-dockkit-split-button]')
-    expect(splitButtons()).toHaveLength(1)
-    act(() => { h.controller.split() })
-    expect(dockPaneIds(h.layout())).toHaveLength(2)
-    const stored = h.instance.getSnapshot()
-    act(() => { expect(h.controller.split()).toBeUndefined() })
-    expect(h.instance.getSnapshot()).toBe(stored)
-    expect(splitButtons()).toHaveLength(2)
-    expect([...splitButtons()].every(button => button.hasAttribute('disabled'))).toBe(true)
-    const right = dockPaneIds(h.layout())[1]!
-    h.open('right.txt', { paneId: right })
-    const guide = getPane(h.layout(), right).tabs.find(id => h.layout().tabs[id]?.kind === 'guide')!
-    act(() => { h.actions.closeTab(SESSION, guide) })
-    const add = element(h.view.container, '[data-dockkit-add-tab]')
-    expect(add.closest('[data-dockkit-pane]')?.getAttribute('data-dockkit-pane')).toBe(right)
-    fireEvent.click(add)
-    expect(getPane(h.layout(), right).tabs.filter(id => h.layout().tabs[id]?.kind === 'guide')).toHaveLength(1)
-    const closing = [...getPane(h.layout(), right).tabs]
-    act(() => { for (const tabId of closing) h.actions.closeTab(SESSION, tabId) })
-    expect(dockPaneIds(h.layout())).toHaveLength(1)
-    expect(splitButtons()).toHaveLength(1)
-    expect(splitButtons()[0]?.disabled).toBe(false)
   })
 })
 

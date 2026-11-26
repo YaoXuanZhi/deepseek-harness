@@ -84,7 +84,7 @@ export function apply(ctx: Context): void {
 | `paneId` | 新 tab 落到这个 pane；缺省为活动的停靠 pane（活动的是浮窗时取第一个停靠 pane）。 |
 | `replaceTab` | 新内容取代这个 tab 的位置，并在同一步关闭它：停靠 tab 让出 pane 与条上位置，浮动 tab 让出浮窗，新 tab 沿用其 pane id 与矩形。揭示时该 tab 保持打开（[语义](../../packages/client/ui-sidebar-right/README.zh.md#ctxsidebarright)）。 |
 | `revealIfOpened` | 缺省 `true`：已显示同一 `(kind, address)` 的 tab 被聚焦并收到 `params`。`false` 则无论如何再开一个。 |
-| `preferNewPane` | 在普通格数预算与空间规则下优先新建停靠格；不能分栏时回退到目标格。与 `replaceTab` 一起使用时忽略。 |
+| `preferNewPane` | 允许分栏时优先新建停靠格；在单右侧边栏规则下回退到唯一的停靠格。与 `replaceTab` 一起使用时忽略。 |
 | `destination`（仅 `openResource`） | `'sidebar'` 或 `'float'`：落在活跃停靠格（活动格是浮窗时为第一个停靠格）或新浮窗，忽略上面四个选项。该处已有副本时揭示它；否则把另一宿主中的副本连同 tab id 与正文状态移过去；否则新开 tab。`'float'` 新开和移动都不改变该列的展开状态（[语义](../../packages/client/ui-sidebar-right/README.zh.md#ctxsidebarright)）。 |
 | `kind`（仅 `openResource`） | 点名打开类型而不排候选；该 kind 的生效实现打开地址，它的 `canOpen` 仍生效。 |
 | `params` | 给正文的导航参数，作为 `navigation.params` 送达。`openResource` 按资源类型经声明合并表 `SidebarRightResourceParamsMap` 定型（文本预览声明 `{ line?: number }`）；`openTab<K>` 按 kind 经 `SidebarRightTabParamsMap` 定型，未声明的 kind 为 `undefined`；正文读到的是二者联合 `SidebarRightNavigationParams`。值按约定为 JSON 形状，运行时不校验。 |
@@ -93,7 +93,7 @@ export function apply(ctx: Context): void {
 
 `close(tabId)` 关闭一个 tab；`hide(tabId)` 关闭浮动 tab 或收起其停靠列；`active()` 返回活动 pane 的活动 tab；`isExpanded()` 与 `toggleExpanded()` 读取与翻转这一列，翻转记入序列。无会话时读操作返回 `undefined` 或 `false`；写操作需要已挂载的会话面，没有时抛错而不是写进没人绘制的面。
 
-`focus(tabId)` 让一个 tab 成为其 pane 的活动 tab；`split(paneId?)` 分割活动的停靠 pane 或点名的 pane，返回新 pane 的 id——pane 数预算或列宽不允许时返回 `undefined` 且不记账；`float(tabId, rect?)` 把一个 tab 浮出为浮窗 pane；`dock(paneId)` 把浮窗 pane 收回停靠区并展开该列。四者都走 store 既有动作、各记一条历史；目标不存在或已处于目标状态时是空操作，与 `open` 一样在没有已挂载会话面时抛错。`TabId`、`PaneId`、`TabRecord`、`FloatRect` 自本包 `/client` 入口再导出，调用方无需引 dockkit。
+`focus(tabId)` 让一个 tab 成为其 pane 的活动 tab；`split(paneId?)` 在单右侧边栏上限下返回 `undefined` 且不记账；`float(tabId, rect?)` 把一个 tab 浮出为浮窗 pane；`dock(paneId)` 把浮窗 pane 收回停靠区并展开该列。`focus`、`float` 与 `dock` 走 store 既有动作、各记一条历史；目标不存在或已处于目标状态时是空操作，与 `open` 一样四者在没有已挂载会话面时抛错。`TabId`、`PaneId`、`TabRecord`、`FloatRect` 自本包 `/client` 入口再导出，调用方无需引 dockkit。
 
 `focusedTarget(element?)` 从实时 DOM 焦点（包括内嵌 iframe）捕获可见页面；侧栏外部或过期的侧栏标记不产生目标。`commandTarget(element?)` 还允许侧栏外部发起的打开操作使用已挂载 Session 的活动停靠窗格。`SidebarRightTarget` 捕获 Session、窗格、host、tab occurrence 和导航 revision。`isTargetCurrent(target)` 在执行前检查这些身份，因此重新打开记录或再次导航都会使已捕获的动作失效；它不会改为操作其他页面。关闭与落位结果见[控制器方法](../../packages/client/ui-sidebar-right/src/client/service.ts)。
 

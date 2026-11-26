@@ -28,8 +28,8 @@ function harness() {
   const ctx = new Context()
   const tabs = new SidebarRightTabRegistry(ctx)
   for (const kind of ['guide', 'files', 'terminal']) tabs.register({ id: kind, kind, title: () => kind, multiple: kind === 'terminal' })
-  const room = { allowed: true, autoFullscreen: false }
-  const { controller, adopt, show: showSession, measure } = createSidebarRightController(tabs, vi.fn(), {
+  const room = { autoFullscreen: false }
+  const { controller, adopt, show: showSession } = createSidebarRightController(tabs, vi.fn(), {
     autoFullscreen: () => room.autoFullscreen,
     openWithFocus: (_sessionId, open) => { open() },
     closeWithFocus: (_sessionId, _paneId, close) => { close() },
@@ -37,10 +37,9 @@ function harness() {
   const store = createSidebarRightStore(() => ({ kind: 'guide', title: 'guide' })).create()
   releases.push(adopt(SESSION, store), () => { controller.tabDomain.dispose() })
   store.actions.setExpanded(SESSION, true)
-  /** Put a Session on screen the way the plugin does, with the room rule its seat reports. */
+  /** Put a Session on screen the way the plugin does. */
   const show = (sessionId = SESSION) => {
     showSession(sessionId)
-    measure(sessionId, () => room.allowed)
     return () => { if (controller.mounted.getSnapshot() === sessionId) showSession(undefined) }
   }
   releases.push(show())
@@ -100,8 +99,11 @@ describe('sidebar focus targets', () => {
     const left = activeDockPaneId(h.layout())
     h.controller.openTab('files')
     const files = h.controller.active()!.id
-    const right = h.controller.split(left)!
-    expect(h.layout().activePaneId).toBe(right)
+    h.controller.openTab('terminal')
+    const terminal = h.controller.active()!.id
+    h.controller.float(terminal)
+    const floating = findTabPane(h.layout(), terminal).id
+    expect(h.layout().activePaneId).toBe(floating)
     const chip = h.tabElement(files)
     chip.focus()
     expect(h.controller.focusedTarget()).toMatchObject({ sessionId: SESSION, paneId: left, tabId: files })
@@ -113,7 +115,7 @@ describe('sidebar focus targets', () => {
     document.body.append(composer)
     composer.focus()
     expect(h.controller.focusedTarget()).toBeUndefined()
-    expect(h.controller.commandTarget()?.paneId).toBe(right)
+    expect(h.controller.commandTarget()?.paneId).toBe(left)
   })
 
   it('rejects collapsed, disconnected, switched-session, moved and reopened targets', () => {
@@ -145,9 +147,10 @@ describe('sidebar focus targets', () => {
 
   it('rejects a pane removed by closing its final content page', () => {
     const h = harness()
-    h.controller.split()
-    h.controller.openTabFromTarget('files', h.controller.commandTarget(null)!)
-    const captured = h.controller.focusedTarget(h.tabElement(h.controller.active()!.id))!
+    h.controller.openTab('files')
+    const files = h.controller.active()!.id
+    h.controller.float(files)
+    const captured = h.controller.focusedTarget(h.tabElement(files))!
     h.controller.close(captured.tabId!)
     expect(h.controller.isTargetCurrent(captured)).toBe(false)
     h.controller.openTabFromTarget('terminal', captured)
@@ -207,16 +210,12 @@ describe('sidebar focus targets', () => {
   it('shares split limits and fullscreen behavior while preserving floating pages', () => {
     const h = harness()
     const target = h.controller.commandTarget(null)!
-    h.room.allowed = false
-    expect(h.controller.splitBlock(target)).toBe('width')
-    h.room.allowed = true
-    expect(h.controller.splitBlock(target)).toBeUndefined()
+    expect(h.controller.splitBlock(target)).toBe('budget')
+    expect(h.controller.split(target.paneId)).toBeUndefined()
     h.controller.toggleFullscreen(target)
     expect(h.layout().mode).toBe('fullscreen')
     h.controller.toggleFullscreen(target)
     expect(h.layout().mode).toBe('push')
-    h.controller.split(target.paneId)
-    expect(h.controller.splitBlock(target)).toBe('budget')
     h.controller.openTab('files')
     const files = h.controller.active()!.id
     h.controller.float(files)
@@ -491,14 +490,11 @@ describe('sidebar keyboard commands', () => {
     const pane = h.paneElement()
     pane.focus()
     const context = { target: pane, region: 'page' as const, modal: null }
-    h.room.allowed = false
-    expect(split.resolve(context)).toMatchObject({ status: 'blocked', reason: en['command.width'] })
-    h.room.allowed = true
-    const pendingSplit = split.resolve(context)
+    expect(split.resolve(context)).toMatchObject({ status: 'blocked', reason: en['command.budget'] })
     const pendingFullscreen = fullscreen.resolve(context)
     const pendingToggle = toggle.resolve(context)
     releases.push(h.show('missing-session' as SessionId))
-    for (const pending of [pendingSplit, pendingFullscreen, pendingToggle]) {
+    for (const pending of [pendingFullscreen, pendingToggle]) {
       expect(pending.status).toBe('handled')
       if (pending.status === 'handled') pending.run()
     }
@@ -506,8 +502,6 @@ describe('sidebar keyboard commands', () => {
     expect(h.layout().expanded).toBe(true)
     expect(toggle.resolve(context).status).toBe('blocked')
     releases.push(h.show())
-    const splitNow = split.resolve(context)
-    if (splitNow.status === 'handled') splitNow.run()
     expect(h.controller.splitBlock(h.controller.commandTarget(null)!)).toBe('budget')
     h.controller.openTab('files')
     const files = h.controller.active()!.id
@@ -534,16 +528,16 @@ describe('sidebar keyboard commands', () => {
 })
 
 describe('page close and refresh', () => {
-  it.each(['macos', 'windows'] as const)('closes two guide panes without closing the window on %s', (platform) => {
+  it.each(['macos', 'windows'] as const)('closes floating and docked guide panes without closing the window on %s', (platform) => {
     const h = harness()
-    h.controller.split()
+    const floatingGuide = Object.values(h.layout().tabs)[0]!
+    h.controller.float(floatingGuide.id)
     const registry = new ShortcutRegistry('desktop', platform)
     const closeWindow = vi.fn()
     releases.push(registerSidebarShortcuts({ register: command => registry.register(command), runtime: 'desktop' }, h.controller, makeTranslate(en), closeWindow))
     const gesture = { code: 'KeyW', meta: platform === 'macos', control: platform === 'windows', alt: false,
       shift: false, repeat: false, composing: false, defaultPrevented: false }
-    const first = Object.values(h.layout().tabs)[0]!
-    const element = h.tabElement(first.id)
+    const element = h.tabElement(floatingGuide.id)
     registry.dispatch(gesture, { target: element, region: 'page', modal: null }, vi.fn())
     element.remove()
     expect(Object.values(h.layout().tabs)).toHaveLength(1)

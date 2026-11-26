@@ -205,14 +205,10 @@ describe('ui-sidebar-right apply', () => {
     // Holding a record pins its address through the resource model.
     if (surface === undefined) throw new Error('expected a surface')
     expect(resources.pin).toHaveBeenCalledWith('sidebar://guide', expect.any(AbortSignal))
-    // The seat reports the room rule its kit measured; a narrow pane is not split.
+    // Docked splitting is disabled so the right column always keeps a single docked pane.
     const panes = () => Object.values(instance.getSnapshot().bySession[SESSION]?.layout.nodes ?? {}).filter(node => node.kind === 'pane')
-    injected.measureRoom(() => false)
     injected.splitPane(surface.layout.activePaneId)
     expect(panes()).toHaveLength(1)
-    injected.measureRoom(() => true)
-    injected.splitPane(surface.layout.activePaneId)
-    expect(panes()).toHaveLength(2)
     // The fullscreen command follows the automatic fullscreen rule the seats report.
     const layoutOf = () => instance.getSnapshot().bySession[SESSION]?.layout
     injected.toggleFullscreen()

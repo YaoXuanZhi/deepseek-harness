@@ -17,10 +17,7 @@ import type {} from './locales.ts'
 export function registerSidebarShortcuts(shortcuts: Pick<Shortcuts, 'register' | 'runtime'>, sidebar: SidebarRightController,
   t: TranslateNS<'sidebarRight'>, closeWindow: () => void): () => void {
   const reason = (kind: 'split' | 'fullscreen', target: SidebarRightTarget): string | null => {
-    if (kind === 'split') {
-      const block = sidebar.splitBlock(target)
-      return block === undefined ? null : t(`command.${block}`)
-    }
+    if (kind === 'split') return t(`command.${sidebar.splitBlock(target)}`)
     if (target.host === 'float') return t('command.float')
     return null
   }
@@ -56,8 +53,7 @@ export function registerSidebarShortcuts(shortcuts: Pick<Shortcuts, 'register' |
         if (unavailable !== null) return { status: 'blocked', reason: unavailable }
         return { status: 'handled', run: () => {
           if (!sidebar.isTargetCurrent(target)) return
-          if (kind === 'split') sidebar.split(target.paneId)
-          else sidebar.toggleFullscreen(target)
+          sidebar.toggleFullscreen(target)
         } }
       },
     }))

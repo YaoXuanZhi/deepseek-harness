@@ -143,18 +143,16 @@ describe('SidebarRightController — opening', () => {
   })
 
   it('lands a new tab in the pane the caller names', () => {
-    const { controller, instance, publish, layout, tabOf, expand } = harness()
+    const { controller, publish, layout, tabOf, expand } = harness()
     expand()
     publish()
-    instance.actions.splitPane(SESSION)
-    publish()
-    const [left, right] = Object.values(layout().nodes).filter(node => node.kind === 'pane').map(node => node.id)
-    if (left === undefined || right === undefined) throw new Error('expected two panes')
-    controller.openResource('dsh-resource://file/session/s-test/a.txt', { paneId: left })
-    expect(findTabPane(layout(), tabOf('a.txt')).id).toBe(left)
+    const [root] = dockPaneIds(layout())
+    if (root === undefined) throw new Error('expected docked pane')
+    controller.openResource('dsh-resource://file/session/s-test/a.txt', { paneId: root })
+    expect(findTabPane(layout(), tabOf('a.txt')).id).toBe(root)
   })
 
-  it('opens new content alone in a preferred pane and falls back to the current pane at the limit', () => {
+  it('falls back to the single docked pane when preferNewPane is requested and reveals existing content', () => {
     const { controller, publish, layout, tabOf, entries, expand } = harness()
     expand()
     publish()
@@ -162,29 +160,19 @@ describe('SidebarRightController — opening', () => {
     controller.openResource('dsh-resource://file/session/s-test/a.txt', { preferNewPane: true })
     const a = tabOf('a.txt')
     const pane = findTabPane(layout(), a)
-    expect(dockPaneIds(layout())).toHaveLength(2)
-    expect(pane.tabs).toEqual([a])
+    expect(dockPaneIds(layout())).toHaveLength(1)
+    expect(pane.tabs).toContain(a)
     expect(entries()).toBe(before + 1)
 
     publish()
     controller.openResource('dsh-resource://file/session/s-test/b.txt', { preferNewPane: true })
-    expect(dockPaneIds(layout())).toHaveLength(2)
+    expect(dockPaneIds(layout())).toHaveLength(1)
     expect(findTabPane(layout(), tabOf('b.txt')).id).toBe(pane.id)
-  })
 
-  it('falls back when the pane is too narrow and reveals existing content without splitting', () => {
-    const { controller, publish, layout, tabOf, room, expand } = harness()
-    expand()
     publish()
-    room.allowed = false
     controller.openResource('dsh-resource://file/session/s-test/a.txt', { preferNewPane: true })
     expect(dockPaneIds(layout())).toHaveLength(1)
-    publish()
-
-    room.allowed = true
-    controller.openResource('dsh-resource://file/session/s-test/a.txt', { preferNewPane: true })
-    expect(dockPaneIds(layout())).toHaveLength(1)
-    expect(getPane(layout(), layout().activePaneId).activeTabId).toBe(tabOf('a.txt'))
+    expect(getPane(layout(), layout().activePaneId).activeTabId).toBe(a)
   })
 
   it('takes the replaced tab\'s pane and slot, closes it, and records one entry', () => {
@@ -278,37 +266,30 @@ describe('SidebarRightController — opening', () => {
     expand()
     publish()
     const guides = (): TabId[] => Object.values(layout().tabs).filter(tab => tab.contentId === 'sidebar://guide').map(tab => tab.id)
-    // Place: the split's guide dragged into the first pane's strip.
-    instance.actions.splitPane(SESSION)
-    let [left, right] = dockPaneIds(layout())
-    if (left === undefined || right === undefined) throw new Error('expected two panes')
-    const [own] = getPane(layout(), left).tabs
-    const arrivingByPlace = getPane(layout(), right).tabs[0]
-    if (own === undefined || arrivingByPlace === undefined) throw new Error('expected seeded guides')
-    instance.actions.placeTab(SESSION, arrivingByPlace, left, 0)
-    expect(guides()).toEqual([own])
-    expect(dockPaneIds(layout())).toHaveLength(1)
-    expect(getPane(layout(), left).activeTabId).toBe(own)
-    // Drop on the centre: the same merge. An edge drop makes a new pane and keeps both.
-    instance.actions.splitPane(SESSION)
-    ;[left, right] = dockPaneIds(layout())
-    if (left === undefined || right === undefined) throw new Error('expected two panes')
-    const arrivingByDrop = getPane(layout(), right).tabs[0]
-    if (arrivingByDrop === undefined) throw new Error('expected the seeded guide')
-    instance.actions.dropTab(SESSION, arrivingByDrop, left, 'right')
+    const [dockedPane] = dockPaneIds(layout())
+    if (dockedPane === undefined) throw new Error('expected docked pane')
+    // Float the guide so the root reseeds its own, then merge via place, center drop, and unfloat.
+    const firstGuide = guides()[0]!
+    instance.actions.floatTab(SESSION, firstGuide)
+    const reseededAfterPlace = guides().find(id => id !== firstGuide)!
+    instance.actions.placeTab(SESSION, firstGuide, dockedPane, 0)
+    expect(guides()).toEqual([reseededAfterPlace])
+    expect(layout().floats).toHaveLength(0)
+
+    instance.actions.floatTab(SESSION, reseededAfterPlace)
+    const reseededAfterDrop = guides().find(id => id !== reseededAfterPlace)!
+    instance.actions.dropTab(SESSION, reseededAfterPlace, dockedPane, 'right')
     expect(guides()).toHaveLength(2)
-    instance.actions.dropTab(SESSION, arrivingByDrop, left, 'center')
-    expect(guides()).toEqual([own])
-    // Dock: a floating guide returning to a pane that reseeded its own.
-    instance.actions.floatTab(SESSION, own)
-    expect(layout().floats).toHaveLength(1)
-    const reseeded = guides().find(id => id !== own)
-    if (reseeded === undefined) throw new Error('expected the root to reseed a guide')
+    instance.actions.dropTab(SESSION, reseededAfterPlace, dockedPane, 'center')
+    expect(guides()).toEqual([reseededAfterDrop])
+
+    instance.actions.floatTab(SESSION, reseededAfterDrop)
+    const reseededAfterDock = guides().find(id => id !== reseededAfterDrop)!
     const [float] = layout().floats
     if (float === undefined) throw new Error('expected the float')
     instance.actions.unfloatPane(SESSION, float)
     expect(layout().floats).toHaveLength(0)
-    expect(guides()).toEqual([reseeded])
+    expect(guides()).toEqual([reseededAfterDock])
   })
 
   it('records the navigation in the Tab domain: params delivered, revision counting every open', () => {
@@ -408,14 +389,12 @@ describe('SidebarRightController — replacing a tab', () => {
 
   it.each([
     ['docked, same pane', false, false],
-    ['docked, another pane', false, true],
     ['floating, docked content', true, false],
-    ['floating, content in another pane', true, true],
-  ] as const)('reveals content already open and keeps the replaced tab (%s)', (_label, floating, split) => {
+    ['floating, content in another float', true, true],
+  ] as const)('reveals content already open and keeps the replaced tab (%s)', (_label, floating, floatTarget) => {
     const h = replaced(floating)
-    const pane = split ? h.controller.split()! : undefined
-    h.controller.openResource(A, pane === undefined ? {} : { paneId: pane })
-    if (pane !== undefined) expect(findTabPane(h.layout(), h.tabOf('a.txt')).id).toBe(pane)
+    h.controller.openResource(A)
+    if (floatTarget) h.controller.float(h.tabOf('a.txt'))
     const before = Object.keys(h.layout().tabs)
     h.controller.openResource(A, { replaceTab: h.from })
     expect(Object.keys(h.layout().tabs)).toEqual(before)
@@ -505,35 +484,21 @@ describe('SidebarRightController — layout operations', () => {
     expect(controller.split()).toBeUndefined()
   })
 
-  it('splits the active docked pane and names the new one, or nothing when the budget or the room rule says no', () => {
-    const { controller, instance, publish, layout, entries, room, expand } = harness()
+  it('never splits a docked or floating pane under the single-sidebar rule and records nothing', () => {
+    const { controller, instance, publish, layout, entries, expand } = harness()
     instance.actions.open(SESSION)
     expand()
     publish()
-    const created = controller.split()
-    expect(created).toBeDefined()
-    expect(dockPaneIds(layout())).toHaveLength(2)
-    expect(dockPaneIds(layout())).toContain(created)
-    publish()
-    // The room rule blocks: nothing is split and nothing is recorded.
-    room.allowed = false
     const before = entries()
     expect(controller.split()).toBeUndefined()
+    expect(dockPaneIds(layout())).toHaveLength(1)
     expect(entries()).toBe(before)
-    room.allowed = true
-    // A floating pane cannot be split.
     const seed = Object.values(layout().tabs).find(tab => tab.title === 'seed')
     if (seed === undefined) throw new Error('expected the seeded guide')
     controller.float(seed.id)
     publish()
     const [float] = layout().floats
     expect(controller.split(float)).toBeUndefined()
-    // The budget: split to two panes, then no more.
-    while (dockPaneIds(layout()).length < 2) {
-      expect(controller.split(dockPaneIds(layout()).at(-1))).toBeDefined()
-      publish()
-    }
-    expect(controller.split()).toBeUndefined()
   })
 
   it('floats a docked tab, and leaves a floating or missing tab alone', () => {
@@ -791,15 +756,6 @@ describe('SidebarRightController — the on-screen Session', () => {
     expect(() => { controller.openResource('dsh-resource://file/session/s-test/a.txt') }).toThrow('no session surface is mounted')
     expect(controller.active()).toBeUndefined()
   })
-
-  it('treats panes its seat has not measured as having room', () => {
-    const { controller, show, instance, layout, expand } = harness()
-    instance.actions.open(SESSION)
-    expand()
-    show(SESSION)
-    expect(controller.split()).toBeDefined()
-    expect(dockPaneIds(layout())).toHaveLength(2)
-  })
 })
 
 describe('explicit tab resource cleanup', () => {
@@ -896,8 +852,8 @@ it('limits batch-close candidates to the captured pane and invalidates a moved a
   const first = h.tabOf('first.txt'), pane = findTabPane(h.layout(), first).id
   h.controller.openResource('dsh-resource://file/session/s-test/second.txt', { paneId: pane })
   const second = h.tabOf('second.txt')
-  const other = h.controller.split(pane)!
-  h.controller.openResource('dsh-resource://file/session/s-test/other.txt', { paneId: other })
+  h.controller.openResource('dsh-resource://file/session/s-test/other.txt', { destination: 'float' })
+  const other = findTabPane(h.layout(), h.tabOf('other.txt')).id
   const candidates = h.controller.menuTabs(SESSION, pane, first)
   expect(candidates).toMatchObject({ close: true, right: [second] })
   expect(candidates.all).not.toContain(h.tabOf('other.txt'))
@@ -961,7 +917,7 @@ describe('SidebarRightController — flashing a reveal', () => {
     const h = harness()
     h.publish()
     h.controller.openResource('dsh-resource://file/session/s-test/page.txt')
-    h.controller.openResource('dsh-resource://file/session/s-test/a.txt', { preferNewPane: true })
+    h.controller.openResource('dsh-resource://file/session/s-test/a.txt', { destination: 'float' })
     const pane = findTabPane(h.layout(), h.tabOf('a.txt')).id
     const flashes = h.controller.flashOf(SESSION)
     expect(flashes.getSnapshot()).toBeUndefined()

@@ -27,7 +27,7 @@ export function controllerHarness() {
     title: address => address.slice(address.lastIndexOf('/') + 1),
   })
   const pin = vi.fn<(address: string, signal: AbortSignal) => void>()
-  const { controller, adopt, forget, show, measure } = createSidebarRightController(tabs, pin, {
+  const { controller, adopt, forget, show } = createSidebarRightController(tabs, pin, {
     autoFullscreen: () => false,
     openWithFocus: (_sessionId, open) => { open() },
     closeWithFocus: (_sessionId, _paneId, close) => { close() },
@@ -39,11 +39,9 @@ export function controllerHarness() {
     if (surface === undefined) throw new Error('expected a surface')
     return surface.layout
   }
-  const room = { allowed: true }
-  /** Publish with the room rule a rendered seat reports. */
+  /** Publish the Session as on screen. */
   const publish = (): (() => void) => {
     show(SESSION)
-    measure(SESSION, () => room.allowed)
     return () => { show(undefined) }
   }
   const titles = (): string[] => {
@@ -57,5 +55,5 @@ export function controllerHarness() {
   }
   const entries = (): number => instance.getSnapshot().bySession[SESSION]?.history.entries.length ?? 0
   const expand = (): void => { instance.actions.setExpanded(SESSION, true) }
-  return { controller, adopt, unadopt, forget, show, measure, tabs, instance, pin, publish, titles, tabOf, layout, entries, room, expand }
+  return { controller, adopt, unadopt, forget, show, tabs, instance, pin, publish, titles, tabOf, layout, entries, expand }
 }

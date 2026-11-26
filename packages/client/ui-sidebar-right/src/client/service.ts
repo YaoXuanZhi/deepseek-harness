@@ -37,7 +37,7 @@ import { sidebarTargetFromElement, type SidebarRightTarget } from './focus.ts'
 import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
 import { createSnapshotStore, type ObservableSnapshot, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { FloatRect, LayoutState, PaneId, TabId, TabRecord } from '@deepseek-ai/dsh-client-ui-dockkit'
-import { activeDockPaneId, canSplit, findContentTab, findPaneContentTab, dockPaneIds, findTabPane, getPane } from '@deepseek-ai/dsh-client-ui-dockkit'
+import { activeDockPaneId, findContentTab, findPaneContentTab, findTabPane, getPane } from '@deepseek-ai/dsh-client-ui-dockkit'
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SidebarRightNavigationParams, SidebarRightResourceParams, SidebarRightTabParamsFor, SidebarRightTabParamsMap } from './contract/params.ts'
@@ -65,15 +65,10 @@ interface Adoption {
   readonly unsubscribe: () => void
 }
 
-/** The room rule's verdict for a docked pane, as a seat's docking kit last measured it: whether two working halves would fit. */
-type RoomRule = (paneId: PaneId) => boolean
-
 /** Plugin-owned Session state the controller reads; the plugin writes it through the factory's callbacks. */
 interface SidebarRightSessions {
   /** Each Session's latest adopted store. */
   readonly adopted: ReadonlyMap<SessionId, Adoption>
-  /** Each Session's room rule as its seat last reported it; a Session without one has room in every pane. */
-  readonly rooms: ReadonlyMap<SessionId, RoomRule>
   /** The Session the plugin names as on screen. */
   readonly onScreen: ObservableSnapshot<SessionId | undefined>
   /** Open tab metadata across saved and adopted Sessions. */
@@ -88,30 +83,26 @@ interface SidebarRightSessions {
  * @param tabs - registered tab types.
  * @param pin - resource retention for an occurrence's lifetime.
  * @param host - the viewport rule and focus continuity the commands use.
- * @returns the controller; store adoption and scope removal; naming the on-screen Session; and recording a seat's room rule.
+ * @returns the controller; store adoption and scope removal; and naming the on-screen Session.
  */
 export function createSidebarRightController(tabs: SidebarRightTabRegistry, pin: PinResource, host: SidebarRightHost): {
   controller: SidebarRightController
   adopt: (sessionId: SessionId, store: SidebarRightSurfaceStore) => () => void
   forget: (sessionId: SessionId) => void
   show: (sessionId: SessionId | undefined) => void
-  measure: (sessionId: SessionId, canSplitPane: RoomRule) => void
 } {
   const adopted = new Map<SessionId, Adoption>()
-  const rooms = new Map<SessionId, RoomRule>()
   const onScreen = createSnapshotStore<SessionId | undefined>(undefined)
   const inventory = new SidebarTabInventory()
   const flashes = new Map<SessionId, SnapshotStore<SidebarRightFlash | undefined>>()
-  const controller = new SidebarRightController(tabs, pin, host, { adopted, rooms, onScreen, openTabs: inventory.source, flashes })
+  const controller = new SidebarRightController(tabs, pin, host, { adopted, onScreen, openTabs: inventory.source, flashes })
   return {
     controller,
     forget: (sessionId) => {
       inventory.remove(sessionId)
-      rooms.delete(sessionId)
       flashes.delete(sessionId)
     },
     show: (sessionId) => { if (onScreen.getSnapshot() !== sessionId) onScreen.set(sessionId) },
-    measure: (sessionId, canSplitPane) => { rooms.set(sessionId, canSplitPane) },
     adopt(sessionId, store) {
       adopted.get(sessionId)?.unsubscribe()
       const sync = (): void => {
@@ -321,7 +312,6 @@ export class SidebarRightController implements ISidebarRight {
   /** The on-screen Session; see {@link ISidebarRight.mounted}. */
   readonly mounted: ObservableSnapshot<SessionId | undefined>
   private readonly adopted: ReadonlyMap<SessionId, Adoption>
-  private readonly rooms: ReadonlyMap<SessionId, RoomRule>
   private readonly closeHandlers = new Map<string, SidebarRightCloseHandler>()
   private readonly flashes: Map<SessionId, SnapshotStore<SidebarRightFlash | undefined>>
 
@@ -347,7 +337,7 @@ export class SidebarRightController implements ISidebarRight {
    * @param tabs - the tab-type registry consulted to claim an address.
    * @param pin - `ctx.resources.pin`, which the Tab domain holds addresses with.
    * @param host - the viewport rule and focus continuity the commands use.
-   * @param sessions - plugin-owned adopted stores, room rules, on-screen Session, and open tab metadata.
+   * @param sessions - plugin-owned adopted stores, on-screen Session, and open tab metadata.
    */
   constructor(
     private readonly tabs: SidebarRightTabRegistry,
@@ -356,7 +346,6 @@ export class SidebarRightController implements ISidebarRight {
     sessions: SidebarRightSessions,
   ) {
     this.adopted = sessions.adopted
-    this.rooms = sessions.rooms
     this.mounted = sessions.onScreen
     this.openTabs = sessions.openTabs
     this.flashes = sessions.flashes
@@ -521,23 +510,11 @@ export class SidebarRightController implements ISidebarRight {
     const layout = surface?.layout
     const replaced = placement.replaceTab === undefined ? undefined : layout?.tabs[placement.replaceTab]
     const targetPane = layout === undefined ? undefined : placement.paneId ?? activeDockPaneId(layout)
-    const target = targetPane === undefined ? undefined : layout?.nodes[targetPane]
-    const preferNewPane = placement.preferNewPane === true
-      && replaced === undefined
-      && layout !== undefined
-      && target?.kind === 'pane'
-      && target.host === 'dock'
-      && target.tabs.length > 0
-      && canSplit(layout)
-      && dockPaneIds(layout).length < 2
-      && this.mounted.getSnapshot() === sessionId
-      && this.canSplitPane(sessionId, target.id)
     const commit = (): void => { actions.openContent(sessionId, {
       kind: claim.kind,
       contentId: claim.contentId,
       title: claim.title,
       ...placement.paneId === undefined ? {} : { paneId: placement.paneId },
-      ...preferNewPane ? { preferNewPane: true } : {},
       ...replaced === undefined ? {} : { replaceTab: replaced.id },
       ...placement.revealIfOpened === undefined ? {} : { revealIfOpened: placement.revealIfOpened },
     }, (tabId) => { this.tabDomain.navigate(sessionId, tabId, { address, params }) }) }
@@ -751,20 +728,18 @@ export class SidebarRightController implements ISidebarRight {
   }
 
   /**
-   * Explain the same geometry and pane-budget rule used by the split control.
+   * Explain why splitting is unavailable for a captured command target.
    * @param target - captured command or button target.
-   * @returns a localizable block discriminator, or undefined when splitting is available.
+   * @returns a localizable block discriminator.
    */
-  splitBlock(target: SidebarRightTarget): 'stale' | 'collapsed' | 'float' | 'empty' | 'budget' | 'width' | undefined {
+  splitBlock(target: SidebarRightTarget): 'stale' | 'collapsed' | 'float' | 'empty' | 'budget' {
     const surface = this.mountedSurface()
     if (surface === undefined || !this.isTargetCurrent(target)) return 'stale'
     const { layout } = surface
     if (target.host === 'float') return 'float'
     if (!layout.expanded) return 'collapsed'
     if (getPane(layout, target.paneId).tabs.length === 0) return 'empty'
-    if (!canSplit(layout) || dockPaneIds(layout).length >= 2) return 'budget'
-    if (!this.canSplitPane(target.sessionId, target.paneId)) return 'width'
-    return undefined
+    return 'budget'
   }
 
   /**
@@ -781,24 +756,13 @@ export class SidebarRightController implements ISidebarRight {
   }
 
   /**
-   * Split a docked pane to its right when the budget and the room rule allow.
-   * @param paneId - the pane to split; defaults to the active docked pane.
-   * @returns the new pane's id, or `undefined` when nothing was split.
+   * Request a docked split; always returns `undefined` under the single-sidebar budget.
+   * @param _paneId - ignored target pane.
+   * @returns `undefined` because docked splitting is disabled.
    */
-  split(paneId?: PaneId): PaneId | undefined {
-    const { sessionId, actions } = this.require()
-    const layout = this.mountedSurface()?.layout
-    if (layout === undefined) return undefined
-    const target = paneId ?? activeDockPaneId(layout)
-    const node = layout.nodes[target]
-    if (node === undefined || node.kind !== 'pane' || node.host !== 'dock') return undefined
-    if (!canSplit(layout) || dockPaneIds(layout).length >= 2 || !this.canSplitPane(sessionId, target)) return undefined
-    let created: PaneId | undefined
-    this.host.openWithFocus(sessionId, () => {
-      actions.splitPane(sessionId, target, (id) => { created = id })
-      return created
-    })
-    return created
+  split(_paneId?: PaneId): PaneId | undefined {
+    this.require()
+    return undefined
   }
 
   /**
@@ -860,11 +824,6 @@ export class SidebarRightController implements ISidebarRight {
   /** The on-screen Session's surface; see {@link SidebarRightController.screen}. */
   private mountedSurface(): SurfaceState | undefined {
     return this.screen()?.surface
-  }
-
-  /** Whether a Session's docked pane has room for two working halves, as its seat last measured; unmeasured panes do. */
-  private canSplitPane(sessionId: SessionId, paneId: PaneId): boolean {
-    return this.rooms.get(sessionId)?.(paneId) ?? true
   }
 
   /**
