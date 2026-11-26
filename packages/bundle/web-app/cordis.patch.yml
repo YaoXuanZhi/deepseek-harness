@@ -566,6 +566,9 @@
     - id: ui-blueprint
       name: '@deepseek-ai/dsh-client-ui-blueprint'
 
+    - id: ui-mermaid
+      name: 'dsh-mermaid'
+
     - id: ui-user-questions
       name: '@deepseek-ai/dsh-client-ui-user-questions'
 

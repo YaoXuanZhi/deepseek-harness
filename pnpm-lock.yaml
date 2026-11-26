@@ -3650,6 +3650,9 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+      dsh-mermaid:
+        specifier: ^0.5.2
+        version: 0.5.2
       open:
         specifier: ^11.0.2
         version: 11.0.4
@@ -25955,6 +25958,11 @@ packages:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
     engines: {node: '>=12'}
 
+  dsh-mermaid@0.5.2:
+    resolution: {integrity: sha512-deRqCksLrVXbVl/fdv1Qui2VaqqCx1jZnHHRS4ISA5Qx4NhXFBzMMorC3e1O/60GA4qNnGQq93FxGHxFnEuaQw==}
+    engines: {node: '>=22.19.0'}
+    hasBin: true
+
   dts-resolver@3.0.0:
     resolution: {integrity: sha512-1T1f+z+4tl9XD+m+0HBgWoL/nm0bOIffyWaUuUSBlFg/86IWvfx+wjNaO/ybU0AJzG9/Mi5hBUgGV6zCmWEN7Q==}
     engines: {node: ^22.18.0 || >=24.0.0}
@@ -33582,6 +33590,8 @@ snapshots:
       dotenv: 16.6.1
 
   dotenv@16.6.1: {}
+
+  dsh-mermaid@0.5.2: {}
 
   dts-resolver@3.0.0(oxc-resolver@11.20.0):
     optionalDependencies:
