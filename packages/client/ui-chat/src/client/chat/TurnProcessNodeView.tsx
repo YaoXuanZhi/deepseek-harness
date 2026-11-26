@@ -49,6 +49,12 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
           turnProcess.setOpen(!open)
         }}
       >
+        <span className={css.avatar} aria-hidden="true">
+          <svg viewBox="0 0 22 22" width="22" height="22" focusable="false">
+            <rect x="8" y="7.5" width="1.8" height="4.4" rx="0.9" fill="#ffffff" fillOpacity="0.95" />
+            <rect x="12.2" y="7.5" width="1.8" height="4.4" rx="0.9" fill="#ffffff" fillOpacity="0.95" />
+          </svg>
+        </span>
         <span className={css.label}>
           {label}
           {duration?.map((part, index) => (

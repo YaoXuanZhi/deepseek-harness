@@ -14,25 +14,21 @@
   isolation: isolate;
 }
 
-/* 76px with its rule: the height of the Sidebar's tab strip and header row
-   (ui-dockkit `.tabStrip` 38px + the pane header's 38px), so the two rules
-   meet at the column edge. The rows add up to it — 10px top inset, the 30px
-   title row, the tab strip's 10px margin, and a 25px view row. When the views
-   and the More launcher do not fit on one row, the row wraps and the header
-   grows past 76px. */
+/* Single-row borderless header aligned with Kimi Work's serene canvas chrome. */
 .header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   flex: none;
   box-sizing: border-box;
-  min-height: 76px;
-  padding: 10px 28px 0 20px;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l3);
+  min-height: 48px;
+  padding: 8px 20px;
+  border-bottom: none;
 }
 
 .header:where(:not(:has(.tabs))) {
-  min-height: 0;
-  padding-bottom: 10px;
+  min-height: 48px;
+  padding-bottom: 8px;
 }
 
 /* Blank Sessions retain navigation controls without conversation title or tabs.
@@ -57,6 +53,7 @@
    (ui-settings-general), which puts it after this row in document order. */
 :global([data-platform='darwin']) .headerLeading,
 :global([data-platform='darwin']) .headerActions,
+:global([data-platform='darwin']) .tabs,
 :global([data-platform='darwin']) .headerUtilities,
 :global([data-platform='darwin']) .headerCorner {
   -webkit-app-region: no-drag;
@@ -162,6 +159,19 @@
   }
 }
 
+.crumbWorkspace {
+  display: inline-block;
+  max-width: 180px;
+  overflow: hidden;
+  padding: 4px 2px 4px 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .crumbCurrent {
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
@@ -221,90 +231,62 @@
   display: none;
 }
 
-/* The tab row sits above the header paint so the active bar covers its rule. */
+/* Inline compact view switcher nestled beside header utilities. */
 .tabs {
-  grid-column: 1 / -1;
   position: relative;
   z-index: 1;
-  display: flex;
-  gap: 16px 20px;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  margin-top: 10px;
-  padding-left: 8px;
-}
-
-@media (max-width: 767px) {
-  :global(html:not([data-platform])) .tabs {
-    padding-left: 0;
-  }
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
 }
 
 .viewTabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 32px;
-  min-width: 0;
-  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
-/* The 16px text line retains 9px below it. The press target extends 10px
-   above the text into the strip's top margin and 10px to each side, matching
-   the inline padding of the Sidebar tab chips (ui-dockkit `.tab`); negative
-   margins keep the layout box at its 25px row and text width. The active bar
-   spans the text and reaches 1px past the tab box to sit over the header
-   rule. */
 .tab {
-  --dsh-tab-hit-inline: 10px;
-
   position: relative;
   box-sizing: border-box;
-  min-height: 35px;
-  margin: -10px calc(-1 * var(--dsh-tab-hit-inline)) 0;
-  padding: 10px var(--dsh-tab-hit-inline) 9px;
+  height: 24px;
+  padding: 0 9px;
   border: none;
+  border-radius: var(--dsw-radius-xs);
   background: transparent;
-  font-size: 13px;
-  line-height: 16px;
+  font-size: 12px;
+  line-height: 24px;
   font-weight: 500;
   color: var(--dsw-alias-label-tertiary);
   cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
-.tab::after {
-  content: '';
-  position: absolute;
-  right: var(--dsh-tab-hit-inline);
-  bottom: -1px;
-  left: var(--dsh-tab-hit-inline);
-  height: 2px;
-  border-radius: 2px;
-  background: transparent;
+@media (hover: hover) {
+  .tab:hover:not(.tabActive) {
+    color: var(--dsw-alias-label-secondary);
+  }
 }
 
-/* Selected tab is blue, not ink: brand-primary resolves to neutral black in
-   this token sheet, so the selected state rides the business blue — the
-   nearest semantic token that stays blue in both themes. */
 .tabActive {
-  color: var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: var(--dsw-shadow-lv1);
 }
 
-.tabActive::after {
-  background: var(--dsw-alias-state-business-primary);
-}
-
-/* The More launcher centers its 22px box on the tab's 16px text line. */
+/* The More launcher aligns with the compact view pills. */
 .viewsMoreAnchor {
   flex: none;
 }
 
 .viewsMore {
-  width: 22px;
-  height: 22px;
-  margin-top: -3px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   color: var(--dsw-alias-label-secondary);
 }
@@ -627,7 +609,7 @@
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px,
-    var(--dsw-alias-bg-base) 36px
+    var(--dsw-alias-bg-base) 44px
   );
 }
 

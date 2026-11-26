@@ -4,7 +4,32 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 2px;
+}
+
+.actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+@media (hover: hover) {
+  .userRow:hover .actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.userRow:focus-within .actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .userStack {

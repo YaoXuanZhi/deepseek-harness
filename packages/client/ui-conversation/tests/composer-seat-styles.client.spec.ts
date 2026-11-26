@@ -44,15 +44,15 @@ describe('docked composer seat styles', () => {
 })
 
 describe('composer statistics row styles', () => {
-  it('reserves one reading row in the docked composer only', () => {
-    expect(rule(inputBarCss, '.root:not(.hero) > .dock'))
-      .toContain('min-height: calc(22px + var(--dsh-content-font-delta-secondary, 0px))')
+  it('collapses the bottom dock in the docked composer while keeping the hero dock empty-hidden', () => {
+    expect(rule(inputBarCss, '.root:not(.hero) > .dock')).toContain('height: 0')
     expect(rule(inputBarCss, '.hero .dock:empty')).toMatch(/display:\s*none;/)
   })
 
-  it('sizes the reservation to one reading: a 20px secondary line plus 1px block padding', () => {
+  it('sizes the inline context trigger and its compact circular ring cleanly', () => {
     const trigger = rule(contextMeterCss, '.trigger')
     expect(trigger).toContain('line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px))')
     expect(trigger).toMatch(/padding:\s*1px 8px;/)
+    expect(rule(contextMeterCss, '.triggerCompact')).toContain('border-radius: 999px')
   })
 })

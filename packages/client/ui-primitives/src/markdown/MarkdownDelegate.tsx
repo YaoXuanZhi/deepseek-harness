@@ -31,6 +31,41 @@ export interface MarkdownDelegateFenceInfo {
   readonly meta?: string | undefined
 }
 
+/** Target passed to a file citation preview loader. */
+export interface MarkdownFilePreviewTarget {
+  readonly path: string
+  readonly line?: number | undefined
+  readonly endLine?: number | undefined
+  readonly heading?: string | undefined
+}
+
+/** One line rendered inside a file citation hover preview card. */
+export interface MarkdownFilePreviewLine {
+  readonly number: number
+  readonly text: string
+  readonly highlighted: boolean
+}
+
+/** Loaded excerpt rendered inside a file citation hover preview card. */
+export interface MarkdownFilePreviewExcerpt {
+  readonly fileName: string
+  readonly lines: readonly MarkdownFilePreviewLine[]
+  readonly isCode: boolean
+}
+
+/** File citation pill and hover-preview capability supplied by a Markdown owner. */
+export interface MarkdownDelegateFilePreview {
+  /**
+   * Load a short excerpt for a cited workspace file.
+   * @param target - Decoded path and optional line range or heading anchor.
+   * @param signal - Aborts when the hover card closes or target changes.
+   * @returns Excerpt lines, or null when the file cannot be previewed.
+   */
+  readonly loadExcerpt: (target: MarkdownFilePreviewTarget, signal: AbortSignal) => Promise<MarkdownFilePreviewExcerpt | null>
+  /** Localized loading status text for screen readers and transient card state. */
+  readonly loadingLabel: string
+}
+
 /** Navigation capabilities supplied by the nearest Markdown owner. */
 export interface MarkdownDelegate {
   /** Open an object menu without executing its normal activation. */
@@ -45,6 +80,8 @@ export interface MarkdownDelegate {
     resourceAddress?: ((path: string) => string) | undefined
     labels: ImageLightboxLabels & { open: string; loading: string; failed: string }
   } | undefined
+  /** Optional inline citation pill styling and hover excerpt loader for local file links. */
+  readonly filePreview?: MarkdownDelegateFilePreview | undefined
   /** Ordinary HTTP(S) activation; absent handlers retain native anchor behavior. */
   readonly openExternalLink?: MarkdownExternalLinkHandler | undefined
   /**
@@ -81,11 +118,12 @@ export function MarkdownDelegateProvider({
   openExternalLink,
   openFile,
   fileImages,
+  filePreview,
   getTriggerProps,
   renderCode,
 }: MarkdownDelegateProviderProps): ReactNode {
-  const delegate = useMemo(() => ({ openExternalLink, openFile, fileImages, getTriggerProps, renderCode }),
-    [openExternalLink, openFile, fileImages, getTriggerProps, renderCode])
+  const delegate = useMemo(() => ({ openExternalLink, openFile, fileImages, filePreview, getTriggerProps, renderCode }),
+    [openExternalLink, openFile, fileImages, filePreview, getTriggerProps, renderCode])
   return (
     <MarkdownDelegateContext.Provider value={delegate}>
       {children}

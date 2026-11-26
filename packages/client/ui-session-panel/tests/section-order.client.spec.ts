@@ -69,16 +69,14 @@ describe('sectionSource order', () => {
     expect(ids(sectionSource(contextOf([...REGISTERED]).ctx))).toEqual(['environment', 'subagents', 'changes', 'jobs'])
   })
 
-  it('never moves Environment, and lands a section after it on either side', () => {
+  it('moves any section, including Environment, before or after a target', () => {
     const source = sectionSource(contextOf([...REGISTERED]).ctx)
-    const before = source.getSnapshot()
     source.move('environment', 'jobs', 'after')
-    expect(source.getSnapshot()).toBe(before)
-    expect(localStorage.getItem(SECTION_ORDER_STORAGE_KEY)).toBeNull()
+    expect(ids(source)).toEqual(['changes', 'subagents', 'jobs', 'environment'])
     source.move('jobs', 'environment', 'before')
-    expect(ids(source)).toEqual(['environment', 'jobs', 'changes', 'subagents'])
+    expect(ids(source)).toEqual(['changes', 'subagents', 'jobs', 'environment'])
     source.move('subagents', 'environment', 'after')
-    expect(ids(source)).toEqual(['environment', 'subagents', 'jobs', 'changes'])
+    expect(ids(source)).toEqual(['changes', 'jobs', 'environment', 'subagents'])
   })
 
   it('ignores a move onto the same section and a move that names a section that is not live', () => {
@@ -91,11 +89,11 @@ describe('sectionSource order', () => {
     expect(localStorage.getItem(SECTION_ORDER_STORAGE_KEY)).toBeNull()
   })
 
-  it('treats a stored value that is not a list as no choice, skips entries that are not strings, and holds Environment first', () => {
+  it('treats a stored value that is not a list as no choice and skips entries that are not strings', () => {
     localStorage.setItem(SECTION_ORDER_STORAGE_KEY, '{"jobs":0}')
     expect(ids(sectionSource(contextOf([...REGISTERED]).ctx))).toEqual(['environment', 'changes', 'subagents', 'jobs'])
     localStorage.setItem(SECTION_ORDER_STORAGE_KEY, '["jobs",7,null,"subagents","environment"]')
-    expect(ids(sectionSource(contextOf([...REGISTERED]).ctx))).toEqual(['environment', 'changes', 'jobs', 'subagents'])
+    expect(ids(sectionSource(contextOf([...REGISTERED]).ctx))).toEqual(['jobs', 'subagents', 'environment', 'changes'])
   })
 
   it('keeps the snapshot until the ledger, the locale, or the order changes, and notifies subscribers of each', () => {

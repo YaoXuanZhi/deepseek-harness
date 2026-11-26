@@ -64,7 +64,7 @@ const MOTION_TAIL_MS = 800
  */
 export function ChatView({
   useSession, useChat, useConversation, useSessions, renderSlot,
-  sessionId, openFile, openExternalLink, resolveFilePath, useContextMenu,
+  sessionId, openFile, openExternalLink, resolveFilePath, loadFilePreview, useContextMenu,
   loadOlder, consumeOlder, loadThrough, loadImage, inspectCall, chatScroll, forkAt,
   usePresentation, useProjection, useInteractionIds, dispatchInteraction, t, fileDrag,
 }: ChatViewSlotProps) {
@@ -112,6 +112,11 @@ export function ChatView({
       dialog: t('image.dialog'), close: t('image.close'),
     },
   }), [directory, t, fileDrag, sessionId])
+  const filePreview = useMemo(() => (
+    loadFilePreview === undefined
+      ? undefined
+      : { loadExcerpt: loadFilePreview, loadingLabel: t('citation.loading') }
+  ), [loadFilePreview, t])
   const codeLabels = useMemo(() => markdownLabels(t).code, [t])
   // Every fence in the flow dispatches by language; the content is the plain
   // code block, so a language without a layer renders as code without diff rows.
@@ -281,6 +286,7 @@ export function ChatView({
               openFile={requestOpenFile}
               openExternalLink={openExternalLink}
               fileImages={fileImages}
+              filePreview={filePreview}
               renderCode={renderCode}
             >
               {renderSlot('conversation.chat.flow', {

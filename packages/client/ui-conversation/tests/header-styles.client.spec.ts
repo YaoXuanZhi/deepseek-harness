@@ -5,19 +5,11 @@ import { describe, expect, it } from 'vitest'
 const css = readFileSync(new URL('../src/client/skeleton/ConversationRoot.module.css', import.meta.url), 'utf8')
 
 describe('conversation header geometry', () => {
-  it('removes the extra tab inset only in narrow Web windows', () => {
-    const narrow = /@media \(max-width: 767px\) \{([\s\S]*?)\n\}/.exec(css)?.[1]
-    expect(narrow).toContain(':global(html:not([data-platform])) .tabs')
-    expect(narrow).toContain('padding-left: 0')
-  })
-
-  it('keeps the single-line header at the shared 76px height', () => {
-    expect(css.match(/\.header\s*\{([^}]*)\}/)?.[1]).toContain('min-height: 76px')
-    expect(css.match(/\.viewTabs\s*\{([^}]*)\}/)?.[1]).toContain('min-height: 25px')
-    // The tab's 35px press target sits 10px above its 25px row through a negative top margin.
-    expect(css.match(/\.tab\s*\{([^}]*)\}/)?.[1]).toContain('min-height: 35px')
-    expect(css.match(/\.tab\s*\{([^}]*)\}/)?.[1]).toContain('margin: -10px calc(-1 * var(--dsh-tab-hit-inline)) 0')
-    expect(css.match(/\.tab\s*\{([^}]*)\}/)?.[1]).toContain('padding: 10px var(--dsh-tab-hit-inline) 9px')
+  it('keeps the single-row borderless header at the 48px height', () => {
+    const header = css.match(/\.header\s*\{([^}]*)\}/)?.[1]
+    expect(header).toContain('min-height: 48px')
+    expect(header).toContain('border-bottom: none')
+    expect(css.match(/\.tab\s*\{([^}]*)\}/)?.[1]).toContain('height: 24px')
   })
 
   it('clips overflowing title actions and fades them inside the gap before the next control', () => {
@@ -32,8 +24,8 @@ describe('conversation header geometry', () => {
     expect(css.match(/^\.headerCorner\s*\{([^}]*)\}/m)?.[1]).toContain('margin-left: 8px')
   })
 
-  it('uses 32px between view labels without changing the action gap', () => {
-    expect(css.match(/\.viewTabs\s*\{([^}]*)\}/)?.[1]).toContain('gap: 32px')
-    expect(css.match(/\.tabs\s*\{([^}]*)\}/)?.[1]).toContain('gap: 16px 20px')
+  it('places view labels inside a compact inline pill switcher', () => {
+    expect(css.match(/\.viewTabs\s*\{([^}]*)\}/)?.[1]).toContain('display: inline-flex')
+    expect(css.match(/\.tabs\s*\{([^}]*)\}/)?.[1]).toContain('display: inline-flex')
   })
 })

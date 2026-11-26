@@ -176,7 +176,11 @@ export function PermissionSelect({
         anchor={
           <button
             type="button"
-            className={css.trigger}
+            className={clsx(
+              css.trigger,
+              (currentValue === FULL_ACCESS || currentValue === AUTO_REVIEW) && css.triggerAuto,
+            )}
+            data-permission-preset={currentValue}
             aria-label={t('mode', { name: currentLabel })}
             title={current === undefined ? undefined : optionDescription(current, t)}
             disabled={locked || busy}

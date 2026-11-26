@@ -3,11 +3,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Side pads ride the shared clearance (figma Input_Bottom drew L32/R32/B8;
-     the sides narrow with the shared width axis); the bottom gradient mask
-     is owned by the chat scroller. No top pad: the composer stack's gap owns
-     the space above; the status strip still carries its own margin. */
-  padding: 0 var(--dsh-composer-side-clearance) 4px;
+  padding: 0 var(--dsh-composer-side-clearance) 14px;
 }
 
 .dock {
@@ -16,16 +12,18 @@
   justify-content: center;
   gap: 12px;
   max-width: 100%;
-  padding-top: 4px;
+  padding-top: 0;
 }
 
-/* The docked composer reserves one statistics row before its readings
-   arrive, so the projections landing never change the composer height. The
-   row height matches the readings: a 20px secondary line plus 1px block
-   padding (ui-chat StatsPills `.pill`, ContextMeter `.trigger`). A minimum,
-   not a fixed height, so taller readings still size the row. */
+/* Keep composer telemetry pills visually tucked away below the floating card
+   so the bottom edge matches Kimi Work's serene floating composer; ContextMeter
+   lives inline beside the model picker in the composer toolbar. */
 .root:not(.hero) > .dock {
-  min-height: calc(22px + var(--dsh-content-font-delta-secondary, 0px));
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .hero .dock:empty {
@@ -56,18 +54,13 @@
   position: relative; /* overlay anchor positioning context */
   display: flex;
   flex-direction: column;
-  /* figma Input 75:8208: 12px between the text area and the button row; the
-     card's top pad before .InputText tightened from the drawn 10 to 8. */
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   max-width: var(--dsh-composer-card-max-width);
-  padding-top: 8px;
-  /* Input stroke: the light neutral (l2, one step above the menus' l1),
-     drawn as the elevation hairline so it costs no layout; the shadow is the
-     soft elevation tier. Fill: the input surface token (elevated in dark). */
+  padding-top: 10px;
   border: 0;
   --dsw-elevation-stroke-color: var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-panel);
+  border-radius: var(--dsw-radius-xl);
   background: var(--dsw-specific-input-major);
   box-shadow: var(--dsw-elevation-soft);
   /* The draft text follows the Settings font-size preference (the textarea,

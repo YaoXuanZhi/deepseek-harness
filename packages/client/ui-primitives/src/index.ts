@@ -121,7 +121,10 @@ export { FenceCodeBlock, FenceMathBlock } from './markdown/FenceBlocks.tsx'
 export type { FenceCodeBlockProps } from './markdown/FenceBlocks.tsx'
 export { JsonBlock } from './markdown/JsonBlock.tsx'
 export { MarkdownDelegateProvider, useMarkdownDelegate } from './markdown/MarkdownDelegate.tsx'
-export type { MarkdownDelegate, MarkdownDelegateProviderProps, MarkdownExternalLinkHandler, MarkdownDelegateFenceInfo } from './markdown/MarkdownDelegate.tsx'
+export type {
+  MarkdownDelegate, MarkdownDelegateFenceInfo, MarkdownDelegateFilePreview, MarkdownDelegateProviderProps,
+  MarkdownExternalLinkHandler, MarkdownFilePreviewExcerpt, MarkdownFilePreviewLine, MarkdownFilePreviewTarget,
+} from './markdown/MarkdownDelegate.tsx'
 export { DetailDocument, detailDocumentState, useDetailDocumentLabels } from './DetailDocument.tsx'
 export type { DetailDocumentCopy, DetailDocumentLabels, DetailDocumentRead, DetailDocumentState } from './DetailDocument.tsx'
 export { MarkdownText } from './markdown/MarkdownText.tsx'

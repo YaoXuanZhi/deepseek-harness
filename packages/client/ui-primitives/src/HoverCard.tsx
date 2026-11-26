@@ -52,11 +52,14 @@ const ANCHORED: CardPosition = {}
  * included in the card's accessible name.
  * @param props.copyLabel - localized accessible activation-label prefix.
  * @param props.copiedLabel - localized visible success label.
+ * @param props.cardClassName - optional class name added to the portaled card surface.
+ * @param props.onOpenChange - optional observer called when the card opens or closes.
  * @returns anchor wrapper with the conditional portaled card.
  */
 export function HoverCard({
   anchor, content, openDelayMs = 500, disabled = false, grouped = false,
   copyText, copyLabel, copiedLabel, variant = 'compact', widthAnchorRef, inline = false, fitContent = false,
+  cardClassName, onOpenChange,
 }: {
   anchor: ReactNode
   /** Inline media preview using the shared menu material and keyboard focus. */
@@ -68,6 +71,8 @@ export function HoverCard({
   grouped?: boolean
   variant?: 'compact' | 'preview'
   widthAnchorRef?: RefObject<HTMLElement | null>
+  cardClassName?: string | undefined
+  onOpenChange?: ((open: boolean) => void) | undefined
 } & ({ copyText?: string | undefined; copyLabel: string; copiedLabel: string } | {
   copyText?: undefined
   copyLabel?: string
@@ -133,6 +138,10 @@ export function HoverCard({
     group.shown(groupOwner, dismissImmediately, portalRef.current!)
     return () => { group.release(groupOwner) }
   }, [group, groupOwner, groupVisible, dismissImmediately])
+
+  useEffect(() => {
+    onOpenChange?.(open)
+  }, [open, onOpenChange])
 
   useEffect(() => {
     if (!closing) return
@@ -281,7 +290,7 @@ export function HoverCard({
       ref={cardRef}
       className={clsx(
         css.card, compact && css.compact, variant === 'preview' && css.preview, inline && css.media, inline && fitContent && css.fitContent,
-        copyable && css.copyable, copied && css.feedback,
+        copyable && css.copyable, copied && css.feedback, cardClassName,
       )}
       data-closing={closing || undefined}
       style={{

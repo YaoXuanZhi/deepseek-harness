@@ -537,6 +537,9 @@ export const InputBar = memo(function InputBar({
           </div>
           <div className={clsx(css.trailing, activity && css.trailingActive)}>
             <div className={css.standardControls} hidden={activity}>
+              {!activity && variant === 'composer' && sessionId !== undefined
+                ? <ContextMeter useProjection={useProjection} t={t} compact />
+                : null}
               {input === undefined || sessionId === undefined
                 ? null
                 : renderSlot('conversation.input.right', {})}
@@ -599,7 +602,6 @@ export const InputBar = memo(function InputBar({
         {variant === 'composer' && input !== undefined && sessionId !== undefined
           ? renderSlot('conversation.composer.dock', {})
           : null}
-        {activity ? null : <ContextMeter useProjection={useProjection} t={t} />}
       </div>
     </div>
   )

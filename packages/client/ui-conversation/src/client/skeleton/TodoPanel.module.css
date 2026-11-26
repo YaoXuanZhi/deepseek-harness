@@ -1,3 +1,8 @@
+/* Suppress duplicate bottom TodoDock while the docked right Session panel displays its Progress card. */
+:global([data-conversation-content]:has([data-session-panel='docked'] [data-session-panel-progress])) .root {
+  display: none;
+}
+
 .root {
   box-sizing: border-box;
   flex: none;

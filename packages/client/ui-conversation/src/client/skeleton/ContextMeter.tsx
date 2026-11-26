@@ -51,9 +51,11 @@ export interface ContextMeterProps {
   useProjection: UseProjection
   /** The owning bar's locale seat, passed down as a plain prop. */
   t: ComposerBarProps['t']
+  /** Compact circular-ring mode embedded inside the composer toolbar. */
+  compact?: boolean | undefined
 }
 
-export function ContextMeter({ useProjection, t }: ContextMeterProps) {
+export function ContextMeter({ useProjection, t, compact = false }: ContextMeterProps) {
   const pressure = useProjection('contextPressure')
   const breakdown = useProjection('contextBreakdown')
   const [open, setOpen] = useState(false)
@@ -103,13 +105,13 @@ export function ContextMeter({ useProjection, t }: ContextMeterProps) {
       <Tooltip label={t('context.aria', { percent: reading })} side="top" delayMs={200} disabled={open} portal>
         <button
           type="button"
-          className={css.trigger}
+          className={compact ? `${css.trigger} ${css.triggerCompact}` : css.trigger}
           aria-label={t('context.aria', { percent: reading })}
           aria-haspopup="dialog"
           aria-expanded={open}
           onClick={() => { setOpen(!open) }}
         >
-          <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden>
+          <svg viewBox="0 0 14 14" width={compact ? 16 : 14} height={compact ? 16 : 14} aria-hidden>
             <circle className={css.track} cx="7" cy="7" r={RADIUS} />
             <circle
               className={css.fill}
@@ -120,7 +122,7 @@ export function ContextMeter({ useProjection, t }: ContextMeterProps) {
               transform="rotate(-90 7 7)"
             />
           </svg>
-          <span>{reading}</span>
+          {!compact && <span>{reading}</span>}
         </button>
       </Tooltip>
       {open && createPortal(

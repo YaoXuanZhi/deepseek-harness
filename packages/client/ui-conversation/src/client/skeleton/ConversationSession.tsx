@@ -100,6 +100,14 @@ function equalBreadcrumbs(left: readonly Breadcrumb[], right: readonly Breadcrum
     })
 }
 
+function workspaceDisplayName(cwd: string | undefined): string | undefined {
+  if (cwd === undefined) return undefined
+  const normalized = cwd.trim().replace(/[\\/]+$/u, '')
+  if (normalized === '') return undefined
+  const segment = normalized.split(/[\\/]/u).at(-1)
+  return segment !== undefined && segment.length > 0 ? segment : undefined
+}
+
 /**
  * Renders Session header chrome above the resident conversation scrollport.
  * @param props - Strict Session store, view ledger, navigation, render, and locale shares.
@@ -114,28 +122,39 @@ export function ConversationSessionHeader({
   const selectedId = useStore(s => s.view)
   const active = resolveActiveView(tabs, selectedId)
   const ancestry = useSessions(s => deriveAncestry(s, sessionId), equalBreadcrumbs)
+  const workspaceName = useSessions(s => workspaceDisplayName(s.byId[sessionId]?.cwd))
   const unpinned = useEntryPins(ids => ids)
   const hasEntryActions = useEntryActions(registered => registered)
   const showTabs = !hideChrome && tabs.length > 1
   const tabRow = useRef<HTMLDivElement>(null)
   const [visibleViewLimit, setVisibleViewLimit] = useState(1)
-  // Observe only the available row width; individual tabs are not measured.
+  // Observe the tab container (and its enclosing title row when the inline
+  // switcher shrinks to its own pills) using the shared 120px-per-tab budget.
   useLayoutEffect(() => {
     const row = tabRow.current
     if (row === null || !hasEntryActions) return
+    const parent = row.parentElement
+    let parentWidth = 0
     const updateLimit = (width: number): void => {
       setVisibleViewLimit(Math.max(1, Math.floor((width - 48) / 120)))
     }
-    updateLimit(row.clientWidth)
+    updateLimit(Math.max(row.clientWidth, parent?.clientWidth ?? 0))
     if (typeof ResizeObserver === 'undefined') return
-    // The row has padding but no border or scrollbar. Its delivered border-box width,
-    // rounded like clientWidth, preserves the tab thresholds without forcing layout again.
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        for (const size of entry.borderBoxSize) updateLimit(Math.round(size.inlineSize))
+        for (const size of entry.borderBoxSize) {
+          const measured = Math.round(size.inlineSize)
+          if (entry.target === parent) {
+            parentWidth = measured
+            updateLimit(measured)
+          } else {
+            updateLimit(Math.max(measured, parentWidth))
+          }
+        }
       }
     })
     observer.observe(row, { box: 'border-box' })
+    if (parent !== null) observer.observe(parent, { box: 'border-box' })
     return () => { observer.disconnect() }
   }, [showTabs, hasEntryActions])
   const { visibleTabs, moreTabs } = useMemo(() => {
@@ -155,6 +174,12 @@ export function ConversationSessionHeader({
           <>
             <div className={css.titleCluster}>
               <nav className={css.crumbs} aria-label={t('session.hierarchy')}>
+                {workspaceName !== undefined && (
+                  <span className={css.crumbSeg}>
+                    <span className={css.crumbWorkspace}>{workspaceName}</span>
+                    <span className={css.crumbSep}>/</span>
+                  </span>
+                )}
                 {ancestry.map((summary, index) => {
                   const last = index === ancestry.length - 1
                   // The current crumb has no navigation, so it is plain text
@@ -212,6 +237,39 @@ export function ConversationSessionHeader({
                 {renderSlot('conversation.session.header.actions', {})}
               </div>
             </div>
+            {showTabs && (
+              // data-conversation-tabs: marks the tab strip, which the window-chrome
+              // geometry and the browser coverage lane anchor on.
+              <div ref={tabRow} className={css.tabs}>
+                <div className={css.viewTabs} role="tablist" data-conversation-tabs="">
+                  {visibleTabs.map(viewTab => (
+                    <button
+                      key={viewTab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={viewTab.id === active?.id}
+                      className={clsx(css.tab, viewTab.id === active?.id && css.tabActive)}
+                      onClick={() => { selectView(viewTab.id) }}
+                    >
+                      <ViewTabLabel label={viewTab.label} />
+                    </button>
+                  ))}
+                </div>
+                {hasEntryActions && (
+                  <ViewsMoreMenu
+                    label={t('session.moreViews')}
+                    current={currentInMore}
+                    entries={moreTabs.map(viewTab => ({
+                      id: viewTab.id, label: viewTab.label,
+                      pinned: !unpinned.includes(viewTab.id), active: viewTab.id === active?.id,
+                    }))}
+                    onOpen={selectView}
+                    onPinnedChange={setPinned}
+                    renderSlot={renderSlot}
+                  />
+                )}
+              </div>
+            )}
             <div className={css.headerUtilities}>
               {renderSlot('conversation.session.header.utilities', {})}
               {renderFactorySlot('contextMenu.button', {
@@ -225,39 +283,6 @@ export function ConversationSessionHeader({
           {renderSlot('conversation.session.header.corner', {})}
         </div>
       </div>
-      {showTabs && (
-        // data-conversation-tabs: marks the tab strip, which the window-chrome
-        // geometry and the browser coverage lane anchor on.
-        <div ref={tabRow} className={css.tabs}>
-          <div className={css.viewTabs} role="tablist" data-conversation-tabs="">
-            {visibleTabs.map(viewTab => (
-              <button
-                key={viewTab.id}
-                type="button"
-                role="tab"
-                aria-selected={viewTab.id === active?.id}
-                className={clsx(css.tab, viewTab.id === active?.id && css.tabActive)}
-                onClick={() => { selectView(viewTab.id) }}
-              >
-                <ViewTabLabel label={viewTab.label} />
-              </button>
-            ))}
-          </div>
-          {hasEntryActions && (
-            <ViewsMoreMenu
-              label={t('session.moreViews')}
-              current={currentInMore}
-              entries={moreTabs.map(viewTab => ({
-                id: viewTab.id, label: viewTab.label,
-                pinned: !unpinned.includes(viewTab.id), active: viewTab.id === active?.id,
-              }))}
-              onOpen={selectView}
-              onPinnedChange={setPinned}
-              renderSlot={renderSlot}
-            />
-          )}
-        </div>
-      )}
     </>
   )
 }

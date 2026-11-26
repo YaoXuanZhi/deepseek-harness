@@ -9,6 +9,14 @@ export function isExplicitFilePath(value: string): boolean {
   return /^(?:[\\/]|\.{1,2}[\\/]|[a-z]:[\\/])/i.test(value)
 }
 
+/** Parsed local file destination with optional line range or heading anchor. */
+export interface ParsedFileLink {
+  readonly path: string
+  readonly line?: number | undefined
+  readonly endLine?: number | undefined
+  readonly heading?: string | undefined
+}
+
 /**
  * Decode a file destination with a fragment, line range, or line/column suffix.
  * Explicit relative, slash/backslash-rooted, and Windows drive paths take
@@ -17,10 +25,10 @@ export function isExplicitFilePath(value: string): boolean {
  * file without selecting a line. Columns are consumed but not selected.
  * Percent-encode literal `?`, `#`, and numeric colon suffixes in filenames.
  * @param value - Parsed Markdown link destination.
- * @returns A local path and optional first line, or undefined for URLs,
+ * @returns A local path and optional line range or heading anchor, or undefined for URLs,
  * fragment-only links, queries, malformed escapes, or control characters.
  */
-export function parseFileLink(value: string): { path: string; line?: number } | undefined {
+export function parseFileLink(value: string): ParsedFileLink | undefined {
   const hash = value.indexOf('#')
   const destination = hash < 0 ? value : value.slice(0, hash)
   if (destination.includes('?')) return undefined
@@ -37,10 +45,20 @@ export function parseFileLink(value: string): { path: string; line?: number } | 
   const suffix = hash < 0 ? /:(\d+)(?::\d+|-(\d+))?$/.exec(destination) : null
   if (suffix !== null) path = path.slice(0, -suffix[0].length)
   if (path.length === 0) return undefined
-  const match = suffix ?? (hash < 0 ? null : /^L(\d+)(?:-L(\d+))?$/.exec(value.slice(hash + 1)))
-  if (match === null) return { path }
+  const fragment = hash < 0 ? '' : value.slice(hash + 1)
+  const match = suffix ?? (hash < 0 ? null : /^L(\d+)(?:-L(\d+))?$/.exec(fragment))
+  if (match === null) {
+    if (fragment.length === 0) return { path }
+    try {
+      const heading = decodeURIComponent(fragment).trim()
+      return heading.length > 0 ? { path, heading } : { path }
+    } catch (_error) {
+      // Malformed fragment escapes keep the decoded file path without a heading anchor.
+      return { path }
+    }
+  }
   const line = Number(match[1])
   const end = match[2] === undefined ? line : Number(match[2])
   if (!Number.isSafeInteger(line) || !Number.isSafeInteger(end) || line < 1 || end < line) return { path }
-  return { path, line }
+  return end > line ? { path, line, endLine: end } : { path, line }
 }

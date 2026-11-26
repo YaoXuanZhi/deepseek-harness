@@ -2,19 +2,20 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  gap: 10px;
   width: 100%;
   min-width: 0;
-  height: calc(33px + var(--dsh-content-font-delta, 0px));
-  padding: 0 0 8px;
+  min-height: calc(38px + var(--dsh-content-font-delta, 0px));
+  padding: 0 0 12px;
   border: none;
   border-bottom: 0.5px solid var(--dsw-alias-border-l2);
   background: none;
   color: var(--dsw-alias-label-tertiary);
   font: inherit;
-  font-size: var(--dsh-content-font-size, 14px);
+  font-size: calc(13.5px + var(--dsh-content-font-delta, 0px));
   cursor: pointer;
   text-align: left;
-  transition: color 100ms ease;
+  transition: color 120ms ease;
 }
 
 .root:disabled {
@@ -27,30 +28,43 @@
   }
 }
 
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  corner-shape: round;
+  background: var(--dsw-specific-assistant-orb-bg);
+  box-shadow: var(--dsw-specific-assistant-orb-shadow);
+}
+
 .chevron {
   flex: none;
   width: 14px;
   height: 14px;
-  margin-left: 4px;
+  margin-left: -4px;
   color: inherit;
-  transition: transform 100ms ease;
+  transform: rotate(-90deg);
+  transition: transform 140ms ease;
 }
 
 .root[data-open] .chevron {
-  transform: rotate(180deg);
+  transform: rotate(0deg);
 }
 
 .label {
   min-width: 0;
   overflow: hidden;
   font-size: inherit;
-  line-height: calc(24px + var(--dsh-content-font-delta, 0px));
+  line-height: calc(22px + var(--dsh-content-font-delta, 0px));
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .durationNumber {
-  font-family: var(--ds-font-family-code);
   font-variant-numeric: tabular-nums;
 }
 

@@ -15,11 +15,11 @@ describe('ui-chat Host settings', () => {
     const { fiber } = configuration
 
     expect(plainConfig(configuration.fiber.effectiveConfig)).toEqual({
-      performanceUsage: 'detailed', linkOpening: 'sidebar', collapseTiming: 'completion', foldedReplies: 'all',
+      performanceUsage: 'detailed', linkOpening: 'sidebar', collapseTiming: 'completion', foldedReplies: 'final',
     })
     await configuration.update({ transcriptView: 'normal' })
     expect(plainConfig(configuration.fiber.effectiveConfig)).toEqual({
-      transcriptView: 'normal', performanceUsage: 'detailed', linkOpening: 'sidebar', collapseTiming: 'completion', foldedReplies: 'all',
+      transcriptView: 'normal', performanceUsage: 'detailed', linkOpening: 'sidebar', collapseTiming: 'completion', foldedReplies: 'final',
     })
     for (const mode of ['expanded', 'compact', 'standard', 'detailed', 'verbose']) {
       await configuration.update({ transcriptView: mode })
@@ -57,15 +57,15 @@ describe('ui-chat Host settings', () => {
   it('validates folded replies and restores the saved choice', async () => {
     const ctx = new Context()
     const configuration = await liveConfig(ctx, { Config, apply })
-    expect(plainConfig(configuration.fiber.effectiveConfig)).toMatchObject({ foldedReplies: 'all' })
-    await configuration.update({ foldedReplies: 'final' })
+    expect(plainConfig(configuration.fiber.effectiveConfig)).toMatchObject({ foldedReplies: 'final' })
+    await configuration.update({ foldedReplies: 'all' })
     const saved = plainConfig(configuration.fiber.effectiveConfig)
     if (typeof saved !== 'object' || saved === null) throw new Error('expected saved configuration object')
-    expect(saved).toMatchObject({ foldedReplies: 'final' })
+    expect(saved).toMatchObject({ foldedReplies: 'all' })
     await expect(configuration.update({ foldedReplies: 'none' })).rejects.toThrow()
     await configuration.fiber.dispose()
     const restored = await liveConfig(ctx, { Config, apply }, saved)
-    expect(plainConfig(restored.fiber.effectiveConfig)).toMatchObject({ foldedReplies: 'final' })
+    expect(plainConfig(restored.fiber.effectiveConfig)).toMatchObject({ foldedReplies: 'all' })
     await restored.fiber.dispose()
   })
 

@@ -13,13 +13,17 @@ import type { RemoteHostFacts } from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-connection/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import { sessionDirectory } from '@deepseek-ai/dsh-api-session-controller/client/directories'
+import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
+import { ContextFilesSection, type ContextFilesSectionInjected } from './ContextFilesSection.tsx'
 import { EnvironmentSection } from './EnvironmentSection.tsx'
 import { PanelDetails } from './PanelDetails.tsx'
 import { PanelFold } from './PanelFold.tsx'
+import { ProgressSection } from './ProgressSection.tsx'
 import { ProjectRow } from './ProjectRow.tsx'
 import { SessionPanel } from './SessionPanel.tsx'
 import { SessionPanelToggle } from './SessionPanelToggle.tsx'
-import { ENVIRONMENT_SECTION_ID, sectionSource } from './sections.ts'
+import { CONTEXT_FILES_SECTION_ID, ENVIRONMENT_SECTION_ID, PROGRESS_SECTION_ID, sectionSource } from './sections.ts'
 import type { ProjectRowInjected, SessionPanelInjected, SessionPanelToggleInjected } from './slots.ts'
 import { SessionPanelState } from './visibility.ts'
 import { de, en, es, fr, ja, NS, pt, ru, zh, type SessionPanelKey } from './locales.ts'
@@ -90,15 +94,43 @@ export function apply(ctx: ClientContext): void {
     }),
   }, SessionPanel))
 
-  ctx.slots.inject('conversation.session.panel.section', () => ctx.slots.register({
-    name: 'conversation.session.panel.section',
-    id: ENVIRONMENT_SECTION_ID,
-    order: 0,
-    label: () => t('section.environment'),
-    children: {
-      'conversation.session.panel.environment.row': { kind: 'list', scope: 'session' },
-    },
-  }, EnvironmentSection))
+  ctx.slots.inject('conversation.session.panel.section', function* () {
+    yield ctx.slots.register({
+      name: 'conversation.session.panel.section',
+      id: PROGRESS_SECTION_ID,
+      order: -20,
+      locale: NS,
+      label: () => t('section.progress'),
+    }, ProgressSection)
+    yield ctx.slots.register({
+      name: 'conversation.session.panel.section',
+      id: CONTEXT_FILES_SECTION_ID,
+      order: -10,
+      locale: NS,
+      label: () => t('section.context'),
+      inject: (): ContextFilesSectionInjected => ({
+        openFile: (sessionId, path) => {
+          const lookup = ctx as {
+            get(name: string): { readonly openResource?: (url: string) => void } | Parameters<typeof sessionDirectory>[0] | undefined
+          }
+          const sidebarRight = lookup.get('sidebarRight') as { readonly openResource?: (url: string) => void } | undefined
+          if (sidebarRight?.openResource === undefined) return
+          const sessions = ctx.get('sessions')
+          const directory = sessions === undefined ? undefined : sessionDirectory(sessions, sessionId)
+          sidebarRight.openResource(fileAddressFor(sessionId, directory, path))
+        },
+      }),
+    }, ContextFilesSection)
+    yield ctx.slots.register({
+      name: 'conversation.session.panel.section',
+      id: ENVIRONMENT_SECTION_ID,
+      order: 0,
+      label: () => t('section.environment'),
+      children: {
+        'conversation.session.panel.environment.row': { kind: 'list', scope: 'session' },
+      },
+    }, EnvironmentSection)
+  })
 
   ctx.slots.inject('conversation.session.panel.environment.row', () => ctx.slots.register({
     name: 'conversation.session.panel.environment.row',

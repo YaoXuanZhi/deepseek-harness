@@ -57,6 +57,9 @@
   top: 12px;
   right: var(--panel-edge);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: clamp(
     var(--panel-min-width),
     calc(var(--dsh-chat-aside-gutter, 0px) - var(--panel-clear) - var(--panel-edge)),
@@ -67,21 +70,18 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   /* The bar has a place of its own: the content keeps its width whether or not
-     the panel scrolls, and the end inset stays 8px. A transparent end border
-     over the panel's own background holds the bar 2px from the edge, as the
-     sidebar does, and the track margin keeps the thumb out of the rounded corners. */
+     the panel scrolls. Transparent outer pad keeps per-card elevation shadows unclipped. */
   scrollbar-gutter: stable;
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
-  --dsh-scrollbar-track-margin: 12px;
-  padding: 6px calc(8px - 2px - var(--dsh-scrollbar-width)) 6px 8px;
+  --dsh-scrollbar-track-margin: 8px;
+  padding: 2px calc(6px - 2px - var(--dsh-scrollbar-width)) 12px 2px;
   border: 0;
   border-right: 2px solid transparent;
-  /* The standard menu tier: a compact summary surface, not an enclosing panel. */
-  border-radius: var(--dsw-radius-lg);
+  border-radius: 0;
   color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-bg-layer-1);
-  box-shadow: var(--dsw-elevation-panel);
+  background: transparent;
+  box-shadow: none;
   pointer-events: auto;
 }
 
@@ -108,9 +108,13 @@
 }
 
 /* Over the transcript the panel is narrower than docked, so it covers less of
-   the transcript, and takes the prominent elevation. */
+   the transcript, and takes one cohesive prominent elevation surface. */
 .panel[data-session-panel='overlay'] {
+  gap: 8px;
   width: min(280px, calc(100% - 2 * var(--panel-edge)));
+  padding: 8px calc(8px - 2px - var(--dsh-scrollbar-width)) 8px 8px;
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-alias-bg-layer-1);
   box-shadow: var(--dsw-elevation-prominent);
 }
 
@@ -141,11 +145,21 @@
 
 .section {
   position: relative;
-  padding: 4px 0 6px;
+  padding: 12px 10px 10px;
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: var(--dsw-elevation-card);
   /* What its title row offers: nothing, unless the reader can move the section (see the rule before `.head`). */
   --section-head-cursor: auto;
   --section-grip-opacity: 0;
   --section-trailing-visibility: visible;
+}
+
+.panel[data-session-panel='overlay'] .section {
+  padding: 4px 0 6px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 /* Reordering. The dragged section dims, and the section the pointer is over
@@ -187,7 +201,7 @@
   display: none;
 }
 
-.section:not(:has(> .body > [data-slot]:empty), :has(> .body > [data-slot] > [data-slot]:only-child:empty))
+.panel[data-session-panel='overlay'] .section:not(:has(> .body > [data-slot]:empty), :has(> .body > [data-slot] > [data-slot]:only-child:empty))
   ~ .section:not(:has(> .body > [data-slot]:empty), :has(> .body > [data-slot] > [data-slot]:only-child:empty)) {
   margin-top: 2px;
   padding-top: 8px;
@@ -201,6 +215,7 @@
   align-items: center;
   gap: 8px;
   min-height: 24px;
+  margin-bottom: 4px;
   padding: 0 6px;
   cursor: var(--section-head-cursor);
 }
@@ -222,14 +237,15 @@
   --section-trailing-visibility: hidden;
 }
 
-/* Secondary ink at medium weight: apart from the primary rows below and the tertiary counts beside it. */
+/* Primary ink at medium weight: clear floating card title above rows below. */
 .title {
   flex: 0 1 auto;
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: var(--dsw-alias-label-secondary);
-  font: var(--dsw-font-xxs-12);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 18px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;

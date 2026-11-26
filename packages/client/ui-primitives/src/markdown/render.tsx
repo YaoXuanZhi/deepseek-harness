@@ -25,7 +25,8 @@ import type {} from 'mdast-util-math'
 import { normalizeUri } from 'micromark-util-sanitize-uri'
 import type { CodeToolbarLabels } from '../CodeToolbar.tsx'
 import { FenceCodeBlock, FenceMathBlock } from './FenceBlocks.tsx'
-import { isExplicitFilePath, parseFileLink } from './file-link.ts'
+import { isExplicitFilePath, parseFileLink, type ParsedFileLink } from './file-link.ts'
+import { CitationPreviewPill } from './CitationPreviewPill.tsx'
 import { renderTexToReact } from './katex.tsx'
 import { LinkIconMedium, classifyLinkPath } from '../LinkIcon.tsx'
 import { useMarkdownDelegate } from './MarkdownDelegate.tsx'
@@ -635,15 +636,29 @@ function renderAnchor(url: string, children: ReactNode[], key: Key, glyph = true
 }
 
 function MarkdownFileLink({ file, glyph, children }: {
-  readonly file: { path: string; line?: number }
+  readonly file: ParsedFileLink
   readonly glyph: boolean
   readonly children: ReactNode[]
 }): ReactNode {
-  const { openFile, fileImages, getTriggerProps } = useMarkdownDelegate()
+  const { openFile, fileImages, filePreview, getTriggerProps } = useMarkdownDelegate()
   const [load] = useState(nextImageLoad)
   if (openFile === undefined) return <>{children}</>
+  const triggerProps = getTriggerProps?.({ kind: 'file', path: file.path, ...(file.line === undefined ? {} : { line: file.line }) })
   // Pure-image anchors already contain their preview and keep one navigation target.
-  const preview = glyph && classifyLinkPath(file.path) === 'image' ? fileImages : undefined
+  const isImage = classifyLinkPath(file.path) === 'image'
+  if (glyph && !isImage && filePreview !== undefined) {
+    return (
+      <CitationPreviewPill
+        file={file}
+        openFile={openFile}
+        filePreview={filePreview}
+        triggerProps={triggerProps}
+      >
+        {children}
+      </CitationPreviewPill>
+    )
+  }
+  const preview = glyph && isImage ? fileImages : undefined
   const resolved = preview?.resolve(file.path)
   const src = resolved === undefined ? undefined : freshImageUrl(resolved, load)
   const anchor = (
@@ -651,7 +666,7 @@ function MarkdownFileLink({ file, glyph, children }: {
       type="button"
       className={clsx(css.fileMention, css.fileLink)}
       title={src === undefined ? file.path : undefined}
-      {...getTriggerProps?.({ kind: 'file', ...file })}
+      {...triggerProps}
       onClick={() => { openFile(file.path, file.line === undefined ? undefined : { line: file.line }) }}
     >
       {glyph && <LinkIconMedium kind={classifyLinkPath(file.path)} className={css.linkIcon} />}

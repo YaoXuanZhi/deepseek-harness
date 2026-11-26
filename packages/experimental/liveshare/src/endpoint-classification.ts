@@ -233,7 +233,10 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'llmAcp/removeProvider': 'owner-only', // owner ACP model providers
   'llmAcp/searchRegistry': 'owner-only', // owner ACP Registry search
   'llmAcp/startAuth': 'owner-only', // owner ACP OAuth sign-in
+  'llmAcp/startTerminalAuth': 'owner-only', // owner ACP embedded terminal sign-in
+  'llmAcp/stopTerminalAuth': 'owner-only', // owner ACP embedded terminal sign-in
   'llmAcp/upsertProvider': 'owner-only', // owner ACP model providers
+  'llmAcp/writeTerminalAuth': 'owner-only', // owner ACP embedded terminal sign-in
   'web/listProviders': 'owner-only', // owner web search and fetch settings
   'agentPresets/list': 'owner-only', // owner agent presets
   'agentPresets/read': 'owner-only', // owner agent presets

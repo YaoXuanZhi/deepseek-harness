@@ -4,7 +4,6 @@ import {
 } from 'react'
 import { IconDragHandleOutlineRegular, isBehindModal, observeComposition, useRowDragPreview } from '@deepseek-ai/dsh-client-ui-primitives'
 import { panelElementId, toggleElementId } from './element-ids.ts'
-import { ENVIRONMENT_SECTION_ID } from './sections.ts'
 import type { SessionPanelPresentation, SessionPanelProps, SessionPanelSectionOwnerProps } from './slots.ts'
 import { presentationOf } from './visibility.ts'
 import css from './SessionPanel.module.css'
@@ -156,8 +155,7 @@ function useSectionReorder(moveSection: (id: string, target: string, placement: 
     setDragged(undefined)
     setTarget(undefined)
   }
-  const placementOver = (id: string, event: DragEvent<HTMLElement>): DropTarget['placement'] =>
-    id === ENVIRONMENT_SECTION_ID ? 'after' : sectionHalf(event)
+  const placementOver = (_id: string, event: DragEvent<HTMLElement>): DropTarget['placement'] => sectionHalf(event)
   return {
     dragged,
     target,
@@ -185,24 +183,22 @@ function useSectionReorder(moveSection: (id: string, target: string, placement: 
         end()
       },
     }),
-    head: (id: string) => id === ENVIRONMENT_SECTION_ID
-      ? {}
-      : {
-        draggable: true,
-        onDragStart: (event: DragEvent<HTMLElement>): void => {
-          if (!canReorder(event.currentTarget)) {
-            event.preventDefault()
-            return
-          }
-          event.dataTransfer.effectAllowed = 'move'
-          event.dataTransfer.setData('application/x-dsh-session-panel-section', id)
-          setDragged(id)
-          preview.start(event)
-        },
-        onDragEnd: (): void => {
-          if (preview.clear()) end()
-        },
+    head: (id: string) => ({
+      draggable: true,
+      onDragStart: (event: DragEvent<HTMLElement>): void => {
+        if (!canReorder(event.currentTarget)) {
+          event.preventDefault()
+          return
+        }
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('application/x-dsh-session-panel-section', id)
+        setDragged(id)
+        preview.start(event)
       },
+      onDragEnd: (): void => {
+        if (preview.clear()) end()
+      },
+    }),
   }
 }
 
@@ -290,11 +286,9 @@ export function SessionPanel({
                   <div className={css.actions}>
                     {renderSlot('conversation.session.panel.section.actions', {}, { entryKey: section.id })}
                   </div>
-                  {section.id !== ENVIRONMENT_SECTION_ID && (
-                    <span className={css.grip} aria-hidden="true" data-session-panel-grip="">
-                      <IconDragHandleOutlineRegular size={14} />
-                    </span>
-                  )}
+                  <span className={css.grip} aria-hidden="true" data-session-panel-grip="">
+                    <IconDragHandleOutlineRegular size={14} />
+                  </span>
                 </div>
                 <div className={css.body}>
                   {renderSlot('conversation.session.panel.section', owner, { only: section.id })}

@@ -5,6 +5,7 @@ import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type {} from '@deepseek-ai/dsh-api-workspace-files/remote'
 import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import { sessionDirectory } from '@deepseek-ai/dsh-api-session-controller/client/directories'
 import type { GroupKey } from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -33,6 +34,7 @@ import type { ChatSnapshot } from './contract/snapshot.ts'
 import { EMPTY_CHAT_SNAPSHOT } from './contract/snapshot.ts'
 import { ApprovalCommand } from './chat/ApprovalCommand.tsx'
 import { sessionFilePath } from './file-path.ts'
+import { createFilePreviewLoader, type WorkspaceFileExcerptReader } from './chat/file-preview.ts'
 import { ChatView } from './chat/ChatView.tsx'
 import { ChatFlow } from './chat/ChatFlow.tsx'
 import { registerChatNodeRenderers } from './chat/register-node-renderers.ts'
@@ -297,6 +299,11 @@ export function apply(ctx: Context): void {
             await Promise.resolve()
           },
           resolveFilePath: sessionFilePath(ctx, sessionId),
+          loadFilePreview: (() => {
+            const workspaceFiles = ctx.get('remote.workspaceFiles') as WorkspaceFileExcerptReader | undefined
+            if (workspaceFiles === undefined) return undefined
+            return createFilePreviewLoader(workspaceFiles, sessionId, sessionFilePath(ctx, sessionId))
+          })(),
           openExternalLink: (url) => {
             if (linkOpening.getSnapshot() === 'sidebar' && ctx.get('sidebarRightTabs')?.get('browser') !== undefined) {
               ctx.sidebarRight.openTab('browser', { params: { url } })

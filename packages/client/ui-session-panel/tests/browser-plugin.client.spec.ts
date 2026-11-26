@@ -96,17 +96,29 @@ describe('ui-session-panel browser half', () => {
     const panel = faceOf(ctx, 'conversation.chat.aside', undefined) as SessionPanelInjected
     const roster = panel.hooks.sections
     const first = roster.getSnapshot()
-    expect(first).toEqual([{ id: 'environment', label: '环境' }])
+    expect(first).toEqual([
+      { id: 'progress', label: '进度' },
+      { id: 'context-files', label: '上下文' },
+      { id: 'environment', label: '环境' },
+    ])
     expect(roster.getSnapshot()).toBe(first)
     const listener = vi.fn()
     const off = roster.subscribe(listener)
     ctx.locale.setLocale('en')
     expect(listener).toHaveBeenCalled()
-    expect(roster.getSnapshot()).toEqual([{ id: 'environment', label: 'Environment' }])
+    expect(roster.getSnapshot()).toEqual([
+      { id: 'progress', label: 'Progress' },
+      { id: 'context-files', label: 'Context' },
+      { id: 'environment', label: 'Environment' },
+    ])
 
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const dispose = ctx.slots.register({ name: 'conversation.session.panel.section', id: 'untitled', order: 5 }, () => null)
-    expect(roster.getSnapshot()).toEqual([{ id: 'environment', label: 'Environment' }])
+    expect(roster.getSnapshot()).toEqual([
+      { id: 'progress', label: 'Progress' },
+      { id: 'context-files', label: 'Context' },
+      { id: 'environment', label: 'Environment' },
+    ])
     roster.getSnapshot()
     expect(error).toHaveBeenCalledTimes(1)
     ctx.locale.setLocale('zh')
@@ -116,7 +128,7 @@ describe('ui-session-panel browser half', () => {
     off()
   })
 
-  it('moves a section from the panel and keeps the order for the roster, with Environment first', async () => {
+  it('moves a section from the panel and keeps the chosen order for the roster', async () => {
     const { ctx } = await bench()
     const panel = faceOf(ctx, 'conversation.chat.aside', undefined) as SessionPanelInjected
     const ids = (): string[] => panel.hooks.sections.getSnapshot().map(section => section.id)
@@ -124,11 +136,11 @@ describe('ui-session-panel browser half', () => {
       ctx.slots.register({ name: 'conversation.session.panel.section', id: 'subagents', order: 200, label: 'Subagents' }, () => null),
       ctx.slots.register({ name: 'conversation.session.panel.section', id: 'jobs', order: 300, label: 'Jobs' }, () => null),
     ]
-    expect(ids()).toEqual(['environment', 'subagents', 'jobs'])
+    expect(ids()).toEqual(['progress', 'context-files', 'environment', 'subagents', 'jobs'])
     panel.moveSection('jobs', 'subagents', 'before')
-    expect(ids()).toEqual(['environment', 'jobs', 'subagents'])
+    expect(ids()).toEqual(['progress', 'context-files', 'environment', 'jobs', 'subagents'])
     panel.moveSection('environment', 'subagents', 'after')
-    expect(ids()).toEqual(['environment', 'jobs', 'subagents'])
+    expect(ids()).toEqual(['progress', 'context-files', 'jobs', 'subagents', 'environment'])
     for (const dispose of disposers) dispose()
   })
 

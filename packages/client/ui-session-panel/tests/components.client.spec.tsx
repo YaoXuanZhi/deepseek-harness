@@ -517,10 +517,10 @@ describe('SessionPanel', () => {
       return { ...base, props: { ...base.props, useSections: selectorOf(THREE) } as SessionPanelProps }
     }
 
-    it('makes every title row but Environment a drag source that ends with a handle, which is a mark and no control', () => {
+    it('makes every title row a drag source that ends with a handle, which is a mark and no control', () => {
       const { props } = threeSections()
       render(<SessionPanel {...props} />)
-      for (const id of ['change-requests', 'jobs']) {
+      for (const id of ['environment', 'change-requests', 'jobs']) {
         expect(headOf(id).draggable).toBe(true)
         const grip = gripOf(id)!
         expect(headOf(id).lastElementChild).toBe(grip)
@@ -528,19 +528,13 @@ describe('SessionPanel', () => {
       }
       // The panel's only button is the control a section put in its own title row.
       expect(screen.getAllByRole('button').map(button => button.getAttribute('aria-label') ?? button.textContent)).toEqual(['刷新'])
-      // Environment keeps its place: its title row is no drag source and has no handle.
-      expect(headOf('environment').draggable).toBe(false)
-      expect(gripOf('environment')).toBeNull()
-      const dataTransfer = transfer()
-      fireEvent.dragStart(headOf('environment'), { dataTransfer })
-      expect(dataTransfer.setData).not.toHaveBeenCalled()
-      expect(marks()).toEqual(NONE)
     })
 
     it('starts no drag while only one shown section can move, since it could land nowhere else', () => {
       const { props, moveSection } = threeSections()
       render(<SessionPanel {...props} />)
-      // CSS hides a section whose body rendered nothing; here, the other movable one.
+      // CSS hides a section whose body rendered nothing; here, the other two movable ones.
+      sectionOf('environment').style.display = 'none'
       sectionOf('change-requests').style.display = 'none'
       const dataTransfer = transfer()
       const start = createEvent.dragStart(headOf('jobs'))
@@ -550,7 +544,7 @@ describe('SessionPanel', () => {
       expect(dataTransfer.setData).not.toHaveBeenCalled()
       expect(marks()).toEqual(NONE)
       expect(moveSection).not.toHaveBeenCalled()
-      // With both shown the drag starts.
+      // With at least two shown sections the drag starts.
       sectionOf('change-requests').style.display = ''
       fireEvent.dragStart(headOf('jobs'), { dataTransfer })
       expect(dataTransfer.setData).toHaveBeenCalledWith('application/x-dsh-session-panel-section', 'jobs')
@@ -603,17 +597,17 @@ describe('SessionPanel', () => {
       expect(marks()).toEqual(NONE)
     })
 
-    it('lands a section after Environment whichever half of it the pointer is over', () => {
+    it('lands a section on the half of Environment the pointer is over', () => {
       const { props, moveSection } = threeSections()
       render(<SessionPanel {...props} />)
       place('environment', 100)
       fireEvent.dragStart(headOf('jobs'), { dataTransfer: transfer() })
       drag(sectionOf('environment'), 'dragOver', { y: 105 })
-      expect(marks()[0]).toEqual([null, 'after'])
+      expect(marks()[0]).toEqual([null, 'before'])
       drag(sectionOf('environment'), 'dragOver', { y: 135 })
       expect(marks()[0]).toEqual([null, 'after'])
       drag(sectionOf('environment'), 'drop', { y: 105 })
-      expect(moveSection.mock.calls).toEqual([['jobs', 'environment', 'after']])
+      expect(moveSection.mock.calls).toEqual([['jobs', 'environment', 'before']])
     })
 
     it('clears the marks when the drag ends without a drop', () => {

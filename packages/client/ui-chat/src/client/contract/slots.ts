@@ -17,7 +17,10 @@ import type {
 } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { ConnectionStateSource } from '@deepseek-ai/dsh-client-connection/client'
-import type { FileDragActions, MarkdownDelegateFenceInfo, MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
+import type {
+  FileDragActions, MarkdownDelegateFenceInfo, MarkdownFileMentions, MarkdownFilePreviewExcerpt,
+  MarkdownFilePreviewTarget, MarkdownLabels,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ContextMenuTriggerProps } from '@deepseek-ai/dsh-client-ui-context-menu/client'
 import type { ChatKey } from '../locale.ts'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
@@ -347,6 +350,8 @@ export interface ChatViewInjected {
   /** Open one HTTP(S) message link at the selected destination, using an external tab if Sidebar Browser is unavailable. */
   openExternalLink: (url: string) => void
   openFile: (path: string, options?: OpenFileOptions) => Promise<void>
+  /** Optional lazy excerpt loader for inline Markdown file citation hover cards. */
+  loadFilePreview?: ((target: MarkdownFilePreviewTarget, signal: AbortSignal) => Promise<MarkdownFilePreviewExcerpt | null>) | undefined
   /** Prepare one older page without publishing it. */
   loadOlder: () => void
   /** Consume the prepared page synchronously; false when none is ready. */

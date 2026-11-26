@@ -2866,7 +2866,7 @@ describe('ChatView', () => {
       turnEnds: new Map([[1, 6]]),
     })
     const view = render(<h.ChatView {...h.props} />)
-    const toggle = view.getByRole('button', { name: '已完成，用时 4秒' })
+    const toggle = view.getByRole('button', { name: '工作了 4秒' })
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     expect(toggle.getAttribute('data-turn-process-tool-calls')).toBe('1')
     expect(toggle.getAttribute('data-turn-process-messages')).toBe('1')
@@ -2893,12 +2893,12 @@ describe('ChatView', () => {
     expect(members.map(member => member.getAttribute('hidden'))).toEqual([null, null])
 
     act(() => { h.set({ nodes: [user(1, 'question'), first] }) })
-    expect(view.getByRole('button', { name: '已完成，用时 4秒' }).getAttribute('aria-expanded')).toBe('false')
+    expect(view.getByRole('button', { name: '工作了 4秒' }).getAttribute('aria-expanded')).toBe('false')
     expect(view.getByText('earlier reply').closest('[hidden]')).toBeNull()
     act(() => { h.set({
       nodes: [user(1, 'question'), first, toolResult(3, 'a'), toolResult(4, 'b', 'subagent'), second],
     }) })
-    const renewedToggle = view.getByRole('button', { name: '已完成，用时 4秒' })
+    const renewedToggle = view.getByRole('button', { name: '工作了 4秒' })
     expect(renewedToggle.getAttribute('aria-expanded')).toBe('true')
     expect(reasoning()).toBeNull()
   })
@@ -3096,14 +3096,14 @@ describe('ChatView', () => {
     })
     const toggle = turnProcessControl(view.container)!
     expect(runningContent(view.container)).toBeNull()
-    expect(toggle.textContent).toBe('已完成，用时 5秒')
+    expect(toggle.textContent).toBe('工作了 5秒')
     expect(toggle.disabled).toBe(false)
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     expect(processRow.getAttribute('hidden')).toBe('until-found')
     fireEvent.click(toggle)
     act(() => { vi.advanceTimersByTime(1_000) })
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
-    expect(toggle.textContent).toBe('已完成，用时 5秒')
+    expect(toggle.textContent).toBe('工作了 5秒')
     expect(processRow.getAttribute('hidden')).toBeNull()
   }))
 
@@ -3483,7 +3483,7 @@ describe('ChatView', () => {
     const view = render(<h.ChatView {...h.props} />)
     const toggle = turnProcessControl(view.container)!
     const processRow = view.getByText('working').closest('[data-chat-flow-kind="assistant-step"]')!
-    expect(toggle.textContent).toBe('已完成，用时 5秒')
+    expect(toggle.textContent).toBe('工作了 5秒')
     expect(toggle.disabled).toBe(true)
     expect(toggle.getAttribute('aria-expanded')).toBeNull()
     expect(processRow.hasAttribute('hidden')).toBe(false)
@@ -3579,7 +3579,7 @@ describe('ChatView', () => {
     })
     const view = render(<h.ChatView {...h.props} />)
     // The exact turn/end includes trailing tool activity after the final text.
-    expect(view.container.querySelector('[data-turn-tail="1"]')?.textContent).not.toContain('已完成，用时 19秒')
+    expect(view.container.querySelector('[data-turn-tail="1"]')?.textContent).not.toContain('工作了 19秒')
   })
 
   it('the assistant footer omits hour-scale run time', () => {
@@ -3595,7 +3595,7 @@ describe('ChatView', () => {
     })
     const view = render(<h.ChatView {...h.props} />)
     expect(view.container.querySelector('[data-turn-tail="1"]')?.textContent)
-      .not.toContain('已完成，用时 1小时5分3秒')
+      .not.toContain('工作了 1小时5分3秒')
   })
 
   it('the settled footer shows usage only in Detailed mode', () => {
@@ -3635,7 +3635,7 @@ describe('ChatView', () => {
     expect(view.queryByRole('dialog')).toBeNull()
     const footer = view.container.querySelector<HTMLElement>('[data-turn-tail="1"]')!
     expect(within(footer).queryByRole('button', { name: /用时/ })).toBeNull()
-    expect(turnProcessControl(view.container)?.textContent).toBe('已完成，用时 19秒')
+    expect(turnProcessControl(view.container)?.textContent).toBe('工作了 19秒')
     act(() => { h.setPerformanceUsage('compact') })
     expect(view.queryByRole('button', { name: /用量/ })).toBeNull()
     act(() => { h.setPerformanceUsage('detailed') })
@@ -3673,7 +3673,7 @@ describe('ChatView', () => {
     const view = render(<h.ChatView {...h.props} />)
     const footer = view.container.querySelector<HTMLElement>('[data-turn-tail="1"]')!
     expect(within(footer).queryByRole('button', { name: /用时/ })).toBeNull()
-    expect(turnProcessControl(view.container)?.textContent).toBe('已完成，用时 19秒')
+    expect(turnProcessControl(view.container)?.textContent).toBe('工作了 19秒')
     expect(view.queryByRole('button', { name: /用量/ })).toBeNull()
   })
 

@@ -20,18 +20,18 @@ describe('Chat presentation policy', () => {
   ] as const)('maps %s to stable presentation capabilities', (mode, foldCompletedTurns, stepGrouping, settledReasoningPreview, liveProcessDetail) => {
     const policy = presentationPolicyFor(mode)
     expect(policy).toEqual({
-      mode, collapseTiming: 'completion', foldedReplies: 'all', foldCompletedTurns, stepGrouping, settledReasoningPreview, liveProcessDetail,
+      mode, collapseTiming: 'completion', foldedReplies: 'final', foldCompletedTurns, stepGrouping, settledReasoningPreview, liveProcessDetail,
     })
     expect(presentationPolicyFor(mode)).toBe(policy)
     expect(presentationPolicyFor(mode, 'completion')).toBe(policy)
-    expect(presentationPolicyFor(mode, 'completion', 'all')).toBe(policy)
+    expect(presentationPolicyFor(mode, 'completion', 'final')).toBe(policy)
     const deferred = presentationPolicyFor(mode, 'next-input')
     expect(deferred).toEqual({ ...policy, collapseTiming: 'next-input' })
     expect(presentationPolicyFor(mode, 'next-input')).toBe(deferred)
     expect(deferred).not.toBe(policy)
-    const finalOnly = presentationPolicyFor(mode, 'completion', 'final')
-    expect(finalOnly).toEqual({ ...policy, foldedReplies: 'final' })
-    expect(presentationPolicyFor(mode, 'completion', 'final')).toBe(finalOnly)
+    const allReplies = presentationPolicyFor(mode, 'completion', 'all')
+    expect(allReplies).toEqual({ ...policy, foldedReplies: 'all' })
+    expect(presentationPolicyFor(mode, 'completion', 'all')).toBe(allReplies)
   })
 
   it('keeps all sixteen mode, timing, and folded-reply policies distinct and stable', () => {
@@ -47,7 +47,7 @@ describe('Chat presentation policy', () => {
   it('forwards all three preferences and removes their subscriptions on disposal', () => {
     const mode = createSnapshotStore<TranscriptViewMode>('compact')
     const timing = createSnapshotStore<CollapseTiming>('completion')
-    const replies = createSnapshotStore<FoldedReplies>('all')
+    const replies = createSnapshotStore<FoldedReplies>('final')
     const policy = derivePresentationPolicy(mode, timing, replies)
     const listener = vi.fn()
     const dispose = policy.subscribe(listener)
@@ -60,13 +60,13 @@ describe('Chat presentation policy', () => {
     expect(policy.getSnapshot()).toBe(presentationPolicyFor('detailed', 'next-input'))
     timing.set('next-input')
     expect(listener).toHaveBeenCalledTimes(2)
-    replies.set('final')
+    replies.set('all')
     expect(listener).toHaveBeenCalledTimes(3)
-    expect(policy.getSnapshot()).toBe(presentationPolicyFor('detailed', 'next-input', 'final'))
+    expect(policy.getSnapshot()).toBe(presentationPolicyFor('detailed', 'next-input', 'all'))
     dispose()
     mode.set('verbose')
     timing.set('completion')
-    replies.set('all')
+    replies.set('final')
     expect(listener).toHaveBeenCalledTimes(3)
   })
 

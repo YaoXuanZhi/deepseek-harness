@@ -29,8 +29,8 @@ export const FOLDED_REPLIES = ['all', 'final'] as const
 /** Which Assistant replies stay visible while a completed Turn folds its process. */
 export type FoldedReplies = typeof FOLDED_REPLIES[number]
 
-/** Keep every Assistant reply visible when no folded-reply preference is saved. */
-export const DEFAULT_FOLDED_REPLIES: FoldedReplies = 'all'
+/** Keep only the final Assistant answer visible while a completed Turn folds when no preference is saved. */
+export const DEFAULT_FOLDED_REPLIES: FoldedReplies = 'final'
 
 /** Work-details presentation modes a user can choose. */
 export const TRANSCRIPT_VIEW_MODES = ['compact', 'standard', 'detailed', 'verbose'] as const

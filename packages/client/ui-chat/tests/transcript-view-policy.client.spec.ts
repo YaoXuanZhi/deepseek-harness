@@ -46,22 +46,22 @@ describe('TranscriptViewPolicy', () => {
     }
   })
 
-  it('keeps every reply by default, persists an explicit folded-reply choice, and adopts saved values', () => {
+  it('keeps only the final answer by default, persists an explicit folded-reply choice, and adopts saved values', () => {
     const host = stubConfigForm<ChatSettings>()
     const policy = new TranscriptViewPolicy(host.scope)
     const changed = vi.fn()
     const unsubscribe = policy.foldedReplies.subscribe(changed)
     try {
-      expect(policy.foldedReplies.getSnapshot()).toBe('all')
-      policy.setFoldedReplies('all')
-      expect(changed).not.toHaveBeenCalled()
-      policy.setFoldedReplies('final')
       expect(policy.foldedReplies.getSnapshot()).toBe('final')
-      expect(host.set).toHaveBeenCalledExactlyOnceWith('foldedReplies', 'final')
-      host.publish({ value: { linkOpening: 'sidebar', performanceUsage: 'detailed', foldedReplies: 'all' }, revision: 2 })
+      policy.setFoldedReplies('final')
+      expect(changed).not.toHaveBeenCalled()
+      policy.setFoldedReplies('all')
       expect(policy.foldedReplies.getSnapshot()).toBe('all')
+      expect(host.set).toHaveBeenCalledExactlyOnceWith('foldedReplies', 'all')
+      host.publish({ value: { linkOpening: 'sidebar', performanceUsage: 'detailed', foldedReplies: 'final' }, revision: 2 })
+      expect(policy.foldedReplies.getSnapshot()).toBe('final')
       host.publish({ value: { linkOpening: 'sidebar', performanceUsage: 'detailed' }, revision: 3 })
-      expect(policy.foldedReplies.getSnapshot()).toBe('all')
+      expect(policy.foldedReplies.getSnapshot()).toBe('final')
       expect(changed).toHaveBeenCalledTimes(2)
       expect(host.set).toHaveBeenCalledTimes(1)
     } finally {
