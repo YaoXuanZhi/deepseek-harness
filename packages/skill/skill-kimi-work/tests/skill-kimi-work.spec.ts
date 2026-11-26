@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
@@ -39,6 +39,16 @@ describe('@deepseek-ai/dsh-skill-kimi-work', () => {
       expect(detail?.source).toBe('bundled')
       expect(detail?.content.length).toBeGreaterThan(80)
       expect(detail?.content.length).toBeLessThan(8192)
+    }
+
+    const wd = await ctx.skills.get('widgetdesign')
+    expect(wd?.resourceBase?.kind).toBe('directory')
+    if (wd?.resourceBase?.kind === 'directory') {
+      expect(existsSync(join(wd.resourceBase.path, 'references/design-system.md'))).toBe(true)
+      expect(existsSync(join(wd.resourceBase.path, 'references/icon-system.md'))).toBe(true)
+      expect(existsSync(join(wd.resourceBase.path, 'references/layout-and-sizing.md'))).toBe(true)
+      const manifest = JSON.parse(readFileSync(join(wd.resourceBase.path, 'references/icons/manifest.json'), 'utf8')) as { name: string }[]
+      expect(manifest).toHaveLength(105)
     }
 
     expect(await ctx.skills.get('unknown-skill')).toBeUndefined()

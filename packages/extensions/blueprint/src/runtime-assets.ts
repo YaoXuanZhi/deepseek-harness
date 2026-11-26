@@ -10,6 +10,7 @@
  * @module @deepseek-ai/dsh-blueprint/runtime-assets
  */
 
+import { KIMI_WIDGET_ICONS } from './kimi-icons.ts'
 import type { BlueprintWidgetRecord } from './types.ts'
 
 /** Injected Kimi Perspective CSS variables and utility classes. */
@@ -18,7 +19,7 @@ export const KIMI_PERSPECTIVE_CSS = `
   color-scheme: light;
   --kp-bg: #FBFAF9;
   --kp-surface: #FFFFFF;
-  --kp-bg-subtle: #F5F5F5;
+  --kp-bg-subtle: #F5F5F4;
   --kp-surface-hover: #F3F3F2;
   --kp-ink: #181817;
   --kp-ink-on-primary: #FFFFFF;
@@ -27,15 +28,15 @@ export const KIMI_PERSPECTIVE_CSS = `
   --kp-border: rgba(0, 0, 0, 0.09);
   --kp-border-subtle: rgba(0, 0, 0, 0.05);
   --kp-blue: #1783FF;
-  --kp-blue-soft: rgba(23, 131, 255, 0.10);
+  --kp-blue-soft: rgba(23, 131, 255, 0.12);
   --kp-green: #16A34A;
-  --kp-green-soft: rgba(22, 163, 74, 0.10);
+  --kp-green-soft: rgba(22, 163, 74, 0.12);
   --kp-amber: #D97706;
-  --kp-amber-soft: rgba(217, 119, 6, 0.10);
+  --kp-amber-soft: rgba(217, 119, 6, 0.12);
   --kp-red: #DC2626;
-  --kp-red-soft: rgba(220, 38, 38, 0.10);
+  --kp-red-soft: rgba(220, 38, 38, 0.12);
   --kp-purple: #7C3AED;
-  --kp-purple-soft: rgba(124, 58, 237, 0.10);
+  --kp-purple-soft: rgba(124, 58, 237, 0.12);
   --kp-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 
   /* Official Kimi Perspective runtime tokens */
@@ -82,9 +83,17 @@ export const KIMI_PERSPECTIVE_CSS = `
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Compatibility aliases */
+  --color-text-primary: var(--kimi-color-text-primary);
+  --color-text-secondary: var(--kimi-color-text-secondary);
+  --color-text-tertiary: var(--kimi-color-text-tertiary);
+  --color-background-primary: var(--kimi-color-surface);
+  --color-background-secondary: var(--kimi-color-surface-muted);
+  --color-border-tertiary: var(--kimi-color-border);
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"], :root.dark {
   color-scheme: dark;
   --kp-bg: #181817;
   --kp-surface: #1F1F1F;
@@ -135,102 +144,320 @@ export const KIMI_PERSPECTIVE_CSS = `
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--kp-surface);
-  color: var(--kp-ink);
+  background: transparent;
+  color: var(--kimi-color-text-primary);
   font-family: var(--kimi-font-sans);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
 }
 
-.kp-root {
-  padding: 16px;
-  color: var(--kp-ink);
+button, input, select, textarea {
+  font: inherit;
 }
 
-.kp-card, .kimi-panel {
-  background: var(--kp-bg-subtle);
+svg text {
+  font-family: var(--kimi-font-sans);
+}
+
+kimi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  line-height: 0;
+  vertical-align: middle;
+  color: currentColor;
+}
+
+.kp-root {
+  padding: var(--kimi-space-4);
+  color: var(--kimi-color-text-primary);
+}
+
+.kp-card {
+  background: var(--kimi-color-surface-muted);
   border: 0.5px solid var(--kp-border-subtle);
   border-radius: var(--kimi-radius-panel);
   padding: 12px 14px;
 }
 
-.kimi-page-title { font-size: 20px; font-weight: 500; line-height: 1.3; margin: 0; }
-.kimi-section-title { font-size: 17px; font-weight: 500; line-height: 1.35; margin: 0; }
-.kimi-text-secondary { font-size: 14px; color: var(--kimi-color-text-secondary); }
-.kimi-meta { font-size: 12px; color: var(--kimi-color-text-tertiary); }
+.kimi-panel {
+  background: transparent;
+  border: 0.5px solid var(--kimi-color-border);
+  border-radius: var(--kimi-radius-panel);
+  padding: var(--kimi-space-4);
+}
+
+.kimi-page-title { font-size: 20px; font-weight: 500; line-height: 1.3; margin: 0; color: var(--kimi-color-text-primary); }
+.kimi-section-title { font-size: 17px; font-weight: 500; line-height: 1.35; margin: 0; color: var(--kimi-color-text-primary); }
+.kimi-text-secondary { font-size: 14px; line-height: 20px; color: var(--kimi-color-text-secondary); }
+.kimi-meta { font-size: 12px; line-height: 16px; color: var(--kimi-color-text-tertiary); }
 .kp-tabular, .kimi-number { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
-.kimi-code { font-family: var(--kimi-font-mono); font-size: 12px; }
+.kimi-code {
+  font-family: var(--kimi-font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 1px 5px;
+  border-radius: var(--kimi-radius-small);
+  background: var(--kimi-color-surface-muted);
+  color: var(--kimi-color-text-primary);
+}
 .kimi-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kimi-space-2); }
 .kimi-stack { display: flex; flex-direction: column; gap: var(--kimi-space-3); }
 .kimi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--kimi-space-3); }
+
+.kimi-svg-text-primary { fill: var(--kimi-color-text-primary); }
+.kimi-svg-text-secondary { fill: var(--kimi-color-text-secondary); }
+.kimi-svg-grid { stroke: var(--kimi-color-text-quaternary); stroke-width: 0.75; fill: none; }
+.kimi-svg-chart-1 { fill: var(--kimi-chart-1); }
+.kimi-svg-chart-2 { fill: var(--kimi-chart-2); }
+.kimi-svg-chart-3 { fill: var(--kimi-chart-3); }
+.kimi-svg-chart-4 { fill: var(--kimi-chart-4); }
+.kimi-svg-chart-5 { fill: var(--kimi-chart-5); }
 
 .kp-badge, .kimi-status {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
+  border-radius: var(--kimi-radius-full);
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.4;
-  background: var(--kp-bg-subtle);
-  color: var(--kp-ink-secondary);
+  line-height: 18px;
+  background: var(--kimi-color-surface-muted);
+  color: var(--kimi-color-text-secondary);
 }
-.kp-badge-blue, .kimi-status--accent { background: var(--kp-blue-soft); color: var(--kp-blue); }
-.kp-badge-green, .kimi-status--positive { background: var(--kp-green-soft); color: var(--kp-green); }
-.kp-badge-amber, .kimi-status--warning { background: var(--kp-amber-soft); color: var(--kp-amber); }
-.kp-badge-red, .kimi-status--danger { background: var(--kp-red-soft); color: var(--kp-red); }
-.kp-badge-purple { background: var(--kp-purple-soft); color: var(--kp-purple); }
+.kp-badge-blue, .kimi-status--accent {
+  background: color-mix(in srgb, var(--kimi-color-accent) 12%, transparent);
+  color: var(--kimi-color-accent);
+}
+.kp-badge-green, .kimi-status--positive {
+  background: color-mix(in srgb, var(--kimi-color-positive) 12%, transparent);
+  color: var(--kimi-color-positive);
+}
+.kp-badge-amber, .kimi-status--warning {
+  background: color-mix(in srgb, var(--kimi-color-warning) 14%, transparent);
+  color: var(--kimi-color-warning);
+}
+.kp-badge-red, .kimi-status--danger {
+  background: color-mix(in srgb, var(--kimi-color-danger) 12%, transparent);
+  color: var(--kimi-color-danger);
+}
+.kp-badge-purple {
+  background: var(--kp-purple-soft);
+  color: var(--kp-purple);
+}
 
-.kp-btn, .kimi-button, .kimi-chip {
+.kp-btn, .kimi-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 30px;
+  height: 32px;
   padding: 0 12px;
   border-radius: var(--kimi-radius-button);
-  border: 0.5px solid var(--kp-border);
-  background: var(--kp-surface);
-  color: var(--kp-ink);
-  font-family: inherit;
-  font-size: 12.5px;
+  border: 0.5px solid var(--kimi-color-border);
+  background: var(--kimi-color-surface);
+  color: var(--kimi-color-text-primary);
+  font-size: 14px;
   font-weight: 500;
+  line-height: 20px;
   cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out), opacity var(--t-fast) var(--ease-out);
 }
-.kp-btn:hover, .kimi-button:hover, .kimi-chip:hover { background: var(--kp-surface-hover); }
-.kp-btn-primary, .kimi-button--primary, .kimi-chip[aria-pressed="true"], .kimi-chip.is-selected {
-  background: var(--kp-ink);
+.kp-btn:hover, .kimi-button:hover { background: var(--kp-surface-hover); }
+.kimi-button:disabled, .kp-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.kp-btn-primary, .kimi-button--primary {
+  background: var(--kimi-color-text-primary);
   color: var(--kp-ink-on-primary);
   border-color: transparent;
 }
-.kp-btn-primary:hover, .kimi-button--primary:hover { opacity: 0.9; background: var(--kp-ink); }
-.kimi-button--ghost { background: transparent; border-color: transparent; }
-.kimi-button--danger { color: var(--kimi-color-danger); }
-.kimi-segmented { display: inline-flex; gap: 4px; padding: 3px; border-radius: var(--kimi-radius-input); background: var(--kp-bg-subtle); }
+.kp-btn-primary:hover, .kimi-button--primary:hover {
+  background: var(--kimi-color-text-primary);
+  opacity: 0.88;
+}
+.kimi-button--secondary {
+  background: var(--kimi-color-surface-muted);
+  color: var(--kimi-color-text-primary);
+  border-color: var(--kimi-color-border);
+}
+.kimi-button--secondary:hover { background: var(--kimi-color-surface-strong); }
+.kimi-button--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--kimi-color-text-secondary);
+}
+.kimi-button--ghost:hover {
+  background: var(--kimi-color-surface-muted);
+  color: var(--kimi-color-text-primary);
+}
+.kimi-button--danger {
+  color: var(--kimi-color-danger);
+  border-color: color-mix(in srgb, var(--kimi-color-danger) 28%, transparent);
+  background: color-mix(in srgb, var(--kimi-color-danger) 8%, transparent);
+}
+.kimi-button--danger:hover {
+  background: color-mix(in srgb, var(--kimi-color-danger) 14%, transparent);
+}
 
-.kimi-field { display: flex; flex-direction: column; gap: 4px; }
-.kimi-label { font-size: 12px; color: var(--kimi-color-text-secondary); }
+.kimi-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--kimi-radius-button);
+  border: 0.5px solid transparent;
+  background: transparent;
+  color: var(--kimi-color-text-secondary);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.kimi-icon-button:hover {
+  background: var(--kimi-color-surface-muted);
+  color: var(--kimi-color-text-primary);
+}
+
+.kimi-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--kimi-radius-chip);
+  border: 0.5px solid var(--kimi-color-border);
+  background: transparent;
+  color: var(--kimi-color-text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.kimi-chip:hover {
+  background: var(--kimi-color-surface-muted);
+  color: var(--kimi-color-text-primary);
+}
+.kimi-chip[aria-pressed="true"], .kimi-chip[aria-selected="true"], .kimi-chip.is-selected {
+  background: var(--kimi-color-text-primary);
+  color: var(--kp-ink-on-primary);
+  border-color: transparent;
+  font-weight: 500;
+}
+
+.kimi-segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--kimi-radius-button);
+  background: var(--kimi-color-surface-muted);
+}
+.kimi-segmented .kimi-chip {
+  height: 26px;
+  border: none;
+  border-radius: var(--kimi-radius-chip);
+  background: transparent;
+}
+.kimi-segmented .kimi-chip[aria-pressed="true"],
+.kimi-segmented .kimi-chip[aria-selected="true"],
+.kimi-segmented .kimi-chip.is-selected {
+  background: var(--kimi-color-surface-raised);
+  color: var(--kimi-color-text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.kimi-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kimi-space-1);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--t-fast) var(--ease-out);
+}
+*:hover > .kimi-row-actions,
+*:focus-within > .kimi-row-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+.kimi-field { display: flex; flex-direction: column; gap: var(--kimi-space-1); }
+.kimi-label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--kimi-color-text-secondary); }
 .kp-input, .kp-select, .kimi-input, .kimi-select, .kimi-textarea {
-  height: 30px;
+  height: 34px;
   padding: 0 10px;
   border-radius: var(--kimi-radius-input);
-  border: 0.5px solid var(--kp-border);
-  background: var(--kp-surface);
-  color: var(--kp-ink);
-  font-family: inherit;
-  font-size: 12.5px;
+  border: 0.5px solid var(--kimi-color-border);
+  background: var(--kimi-color-surface);
+  color: var(--kimi-color-text-primary);
+  font-size: 14px;
   outline: none;
+  transition: border-color var(--t-fast) var(--ease-out);
 }
-.kimi-textarea { height: auto; min-height: 64px; padding: 8px 10px; }
+.kimi-textarea { height: auto; min-height: 68px; padding: 8px 10px; line-height: 20px; }
 .kp-input:focus, .kp-select:focus, .kimi-input:focus, .kimi-select:focus, .kimi-textarea:focus {
-  border-color: var(--kp-ink);
+  border-color: var(--kimi-color-text-primary);
 }
-.kimi-range { accent-color: var(--kimi-color-text-primary); }
-.kimi-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.kimi-table th, .kimi-table td { padding: 8px 10px; border-bottom: 0.5px solid var(--kp-border); text-align: left; }
-.kimi-table th { font-weight: 500; color: var(--kimi-color-text-secondary); font-size: 12px; }
+.kimi-range {
+  accent-color: var(--kimi-color-text-primary);
+  cursor: pointer;
+}
+.kimi-switch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 34px;
+  height: 20px;
+  margin: 0;
+  border-radius: var(--kimi-radius-full);
+  background: var(--kimi-color-surface-strong);
+  border: 0.5px solid var(--kimi-color-border);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--t-fast) var(--ease-out);
+}
+.kimi-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+  transition: transform var(--t-fast) var(--ease-out);
+}
+.kimi-switch:checked {
+  background: var(--kimi-color-text-primary);
+  border-color: var(--kimi-color-text-primary);
+}
+.kimi-switch:checked::after {
+  transform: translateX(14px);
+  background: var(--kp-ink-on-primary);
+}
+
+.kimi-table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.kimi-table th, .kimi-table td {
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--kimi-color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+.kimi-table th {
+  font-weight: 500;
+  color: var(--kimi-color-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.kimi-table th.kimi-number, .kimi-table td.kimi-number {
+  text-align: right;
+}
 `.trim()
 
 function escapeScriptJson(value: unknown): string {
@@ -260,8 +487,40 @@ export function assembleWidgetHtml(record: BlueprintWidgetRecord, rawHtml: strin
   }
   const bridgeScript = `
 (function () {
+  var KIMI_ICONS = ${escapeScriptJson(KIMI_WIDGET_ICONS)};
+  if (typeof customElements !== 'undefined' && typeof HTMLElement !== 'undefined' && !customElements.get('kimi-icon')) {
+    var KimiIconElement = function () {
+      return Reflect.construct(HTMLElement, [], KimiIconElement);
+    };
+    KimiIconElement.prototype = Object.create(HTMLElement.prototype);
+    KimiIconElement.prototype.constructor = KimiIconElement;
+    KimiIconElement.observedAttributes = ['name', 'width', 'height'];
+    KimiIconElement.prototype._render = function () {
+      var w = this.getAttribute('width');
+      var h = this.getAttribute('height');
+      if (w) this.style.width = /^\\d+$/.test(w) ? w + 'px' : w;
+      if (h) this.style.height = /^\\d+$/.test(h) ? h + 'px' : h;
+      var iconName = this.getAttribute('name') || '';
+      var body = iconName && Object.prototype.hasOwnProperty.call(KIMI_ICONS, iconName) ? KIMI_ICONS[iconName] : null;
+      if (body) {
+        this.removeAttribute('data-missing-icon');
+        this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width:100%;height:100%;display:block">' + body + '</svg>';
+      } else {
+        this.innerHTML = '';
+        if (iconName) this.setAttribute('data-missing-icon', iconName);
+      }
+    };
+    KimiIconElement.prototype.connectedCallback = function () { this._render(); };
+    KimiIconElement.prototype.attributeChangedCallback = function () { this._render(); };
+    customElements.define('kimi-icon', KimiIconElement);
+  }
+
   var state = ${escapeScriptJson(bootstrap)};
-  var theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  var viewState = { main: {} };
+  var viewStateListeners = [];
+  var theme = (document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark')) ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.classList.toggle('dark', theme === 'dark');
   var locale = navigator.language || 'zh-CN';
   var slotListeners = Object.create(null);
   var dataListeners = [];
@@ -365,6 +624,7 @@ export function assembleWidgetHtml(record: BlueprintWidgetRecord, rawHtml: strin
         var changed = p.theme !== theme;
         theme = p.theme;
         document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.classList.toggle('dark', theme === 'dark');
         if (changed) {
           for (var i = 0; i < themeListeners.length; i++) {
             try { themeListeners[i](theme); } catch (_e) {}
@@ -627,6 +887,23 @@ export function assembleWidgetHtml(record: BlueprintWidgetRecord, rawHtml: strin
   window.DaimonWidget = api;
   window.DaimonCanvas = {
     files: filesApi,
+    capabilities: { files: true },
+    get viewState() { return viewState; },
+    setViewState: function (patch) {
+      if (patch && typeof patch === 'object' && !Array.isArray(patch)) {
+        viewState = { main: Object.assign({}, viewState.main || {}, patch) };
+        for (var vi = 0; vi < viewStateListeners.length; vi++) {
+          try { viewStateListeners[vi](viewState); } catch (_ev) {}
+        }
+      }
+    },
+    onViewStateChange: function (cb) {
+      viewStateListeners.push(cb);
+      try { cb(viewState); } catch (_ev0) {}
+      return function () {
+        viewStateListeners = viewStateListeners.filter(function (fn) { return fn !== cb; });
+      };
+    },
     expand: function () { post('expand', {}); },
     openDashboard: function (canvasId) {
       post('openCanvas', { canvasId: canvasId || null });

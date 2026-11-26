@@ -1,25 +1,38 @@
 ---
 name: binding
-description: Connect Automations and Widgets bidirectionally with JSON Schema validation using the Binding tool (artifact-to-slot data push and widget-event-to-automation triggers).
+description: Connect Automations and Widgets bidirectionally with JSON Schema validation using the Binding tool (automation result to widget main slot, and widget submit event to automation input).
 ---
 
 # Blueprint Data & Event Bindings (`binding`)
 
-`Binding` decouples visual `Widget` presentation from `Automation` data collection and computation.
+`Binding` owns the durable, schema-validated edge between an `Automation` and a `Widget`:
 
-## Two Binding Directions
+1. **Artifact Delivery (`automation` -> `widget`)**:
+   - `source_kind: 'automation'`, `source_id: automationId`, `source_port: 'result'`
+   - `target_kind: 'widget'`, `target_id: widgetId`, `target_port: 'slot:main'`
+   - Every succeeded automation run validates its output against `result_schema_json` and delivers it into `Widget.latestData.main`, live-updating mounted Widget frames in Chat and Canvas.
+2. **Interactive Submit Trigger (`widget` -> `automation`)**:
+   - `source_kind: 'widget'`, `source_id: widgetId`, `source_port: 'event:submit'`
+   - `target_kind: 'automation'`, `target_id: automationId`, `target_port: 'input'`
+   - When iframe code calls `window.DaimonWidget.emit('submit', payload)`, the host validates `payload` and triggers the bound Automation with `ctx['input'] = payload`.
 
-1. **Data Push (`automation` -> `widget`)**:
-   - `source: { kind: 'automation', id: automationId, port: 'result' }`
-   - `target: { kind: 'widget', id: widgetId, port: 'slot:main' }`
-   - Every successful automation run validates its artifact and writes `widget.latestData.main`, updating live open widgets in Chat and Canvas dashboards.
-2. **Interactive Trigger (`widget` -> `automation`)**:
-   - `source: { kind: 'widget', id: widgetId, port: 'event:submit' }`
-   - `target: { kind: 'automation', id: automationId, port: 'input' }`
-   - When the user clicks a control calling `window.DaimonWidget.emit('submit', payload)`, the host validates `payload` and triggers an automation run with `ctx['input'] = payload`.
+## Pre-Creation & Revalidation Checklist
 
-## Schema Alignment Checklist
-
-1. Define `resultSchema` on the `Automation` (`type: 'object'`, `properties`, `required`) and `slots.main.schema` on the `Widget`.
-2. Ensure every property listed in `Widget.slots.main.schema.required` is produced by `Automation.resultSchema.properties` with a compatible JSON Schema type.
-3. Create the edge with `Binding({ action: 'create', source, target })` and verify compatibility with `Binding({ action: 'validate', id })`.
+1. **Define compatible object schemas on both endpoints**:
+   - Every property listed in `Widget` `slots.main.schema.required` MUST exist in `Automation` `resultSchema.properties` with a compatible JSON Schema type.
+   - Every property required by `Automation` `inputSchema` MUST be supplied by `Widget` `events.submit.schema` (or made optional with a fallback in `run(ctx)` so manual verification runs succeed without user form input).
+2. **Validate Widget HTML first**: Run `Widget({ action: 'validate', id: widgetId })` before attaching a Binding.
+3. **Create & verify**:
+   ```json
+   {
+     "action": "create",
+     "source_kind": "automation",
+     "source_id": "auto_id",
+     "source_port": "result",
+     "target_kind": "widget",
+     "target_id": "widget_id",
+     "target_port": "slot:main"
+   }
+   ```
+   Then confirm `Binding({ action: 'validate', id: bindingId })` returns `valid: true`.
+4. **Revalidate after schema or HTML edits**: Whenever `AutomationUpdate` or `Widget.update` changes schemas or `index.html`, re-run `Widget({ action: 'validate' })` and `Binding({ action: 'validate' })`, repairing the owning endpoint if any mismatch is reported.

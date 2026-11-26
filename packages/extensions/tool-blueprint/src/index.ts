@@ -97,8 +97,9 @@ export function apply(ctx: Context): void {
     name: 'Widget',
     description:
       'Create, update, validate, inspect, and display interactive HTML/CSS/JS Widgets (`小组件`). '
+      + 'Before authoring any Widget HTML/CSS, load `widgetdesign` (and its `references/design-system.md`). '
       + 'Always call `validate` before `show` or placing a widget onto a `Canvas`. '
-      + 'The host automatically injects Kimi Perspective `--kp-*` tokens and `window.DaimonWidget` into every widget.',
+      + 'The host automatically pre-loads the Kimi Perspective design system (`--kimi-*` tokens, `.kimi-*` component classes, `<kimi-icon>` 105-icon library) and `window.DaimonWidget`.',
     parameters: {
       action: {
         type: 'string',
@@ -120,7 +121,7 @@ export function apply(ctx: Context): void {
       },
       html: {
         type: 'string',
-        description: 'Complete `index.html` markup for `create` or `update`. Use `--kp-*` CSS tokens and `window.DaimonWidget`.',
+        description: 'Complete `index.html` markup for `create` or `update`. Use `--kimi-*` tokens, `.kimi-*` host classes, `<kimi-icon name="...">`, and `window.DaimonWidget`.',
       },
       slots_json: {
         type: 'string',

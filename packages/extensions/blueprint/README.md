@@ -58,7 +58,8 @@ Mount `@deepseek-ai/dsh-blueprint` on the Host plane so presets can expose `@dee
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | `BlueprintService` CRUD, HTTP sandboxed asset route, `@Remote` RPC methods, and Python Automation runner |
-| [`src/runtime-assets.ts`](src/runtime-assets.ts) | Kimi Perspective CSS variables and `window.DaimonWidget` iframe runtime |
+| [`src/runtime-assets.ts`](src/runtime-assets.ts) | Kimi Perspective CSS variables, `.kimi-*` host component classes, `<kimi-icon>` custom element, and `window.DaimonWidget` iframe runtime |
+| [`src/kimi-icons.ts`](src/kimi-icons.ts) | Curated 105-icon Kimi Perspective `24x24` `currentColor` SVG dictionary backing `<kimi-icon>` |
 | [`src/validation.ts`](src/validation.ts) | HTML validation, 12-column grid non-overlap solver, JSON Schema binding validator, and 5-field cron matcher |
 | [`src/types.ts`](src/types.ts) | Shared branded IDs and four-asset wire records |
 

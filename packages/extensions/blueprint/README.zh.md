@@ -58,7 +58,8 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | `BlueprintService` 增删改查、HTTP 沙箱资源路由、`@Remote` 远程方法与 Python 任务执行器 |
-| [`src/runtime-assets.ts`](src/runtime-assets.ts) | Kimi Perspective CSS 变量与 `window.DaimonWidget` 沙箱运行时 |
+| [`src/runtime-assets.ts`](src/runtime-assets.ts) | Kimi Perspective CSS 变量、`.kimi-*` 宿主组件类、`<kimi-icon>` 自定义元素与 `window.DaimonWidget` 沙箱运行时 |
+| [`src/kimi-icons.ts`](src/kimi-icons.ts) | 支撑 `<kimi-icon>` 的 105 个官方 Kimi Perspective `24x24` `currentColor` 矢量图标字典 |
 | [`src/validation.ts`](src/validation.ts) | HTML 校验、12 列栅格无重叠自动排版、JSON Schema 绑定校验及 5 段式 Cron 匹配 |
 | [`src/types.ts`](src/types.ts) | 品牌化 ID 与四元资产共享类型声明 |
 

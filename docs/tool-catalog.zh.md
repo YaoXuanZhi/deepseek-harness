@@ -3347,7 +3347,7 @@ web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可�
 
 ### `Widget`
 
-创建、更新、校验、查看并展示交互式 HTML/CSS/JS 小组件（`小组件`）。在执行 `show` 或将小组件放入 `Canvas` 前必须先执行 `validate`。宿主会自动注入 Kimi Perspective `--kp-*` 令牌与 `window.DaimonWidget`。
+创建、更新、校验、查看并展示交互式 HTML/CSS/JS 小组件（`小组件`）。在编写任何小组件 HTML/CSS 之前，请先加载 `widgetdesign`（及其 `references/design-system.md`）。在执行 `show` 或将小组件放入 `Canvas` 前必须先执行 `validate`。宿主会自动预载 Kimi Perspective 设计系统（`--kimi-*` 令牌、`.kimi-*` 宿主组件类、`<kimi-icon>` 105 图标库）与 `window.DaimonWidget`。
 
 ```json
 {
@@ -3382,7 +3382,7 @@ web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可�
     },
     "html": {
       "type": "string",
-      "description": "Complete `index.html` markup for `create` or `update`. Use `--kp-*` CSS tokens and `window.DaimonWidget`."
+      "description": "Complete `index.html` markup for `create` or `update`. Use `--kimi-*` tokens, `.kimi-*` host classes, `<kimi-icon name=\"...\">`, and `window.DaimonWidget`."
     },
     "slots_json": {
       "type": "string",

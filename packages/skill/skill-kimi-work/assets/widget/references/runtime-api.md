@@ -1,85 +1,74 @@
-# `window.DaimonWidget` & `window.DaimonCanvas` Runtime Reference
+# Widget Runtime API (`window.DaimonWidget` & `window.DaimonCanvas`)
 
-Every sandboxed Widget iframe receives `window.DaimonWidget` and `window.DaimonCanvas` automatically in `<head>`.
+Read this reference before writing iframe JavaScript that interacts with `window.DaimonWidget` or `window.DaimonCanvas`. Static or self-contained client-side interactive widgets (tabs, filters, calculators, SVG charts) need no host calls beyond optional `DaimonWidget.resize()` after dynamic DOM height changes.
 
-## Portable Data, Theme & Status Surface
+## 1. Portable `window.DaimonWidget` Surface
 
-```js
-const host = window.DaimonWidget
-
-// Subscribe to live slot updates (`data.main` holds the latest Automation artifact)
-const stopData = host.onDataChange((data) => {
-  renderView(data.main || {})
-})
-
-// Read and persist user-controlled form/filter state across reloads
-const saved = host.inputState.currentInput || host.getSavedInput() || {}
-host.saveInput({ period: '30d', threshold: 0.8 })
-
-// Emit a named event (typically 'submit') to trigger a bound Automation
-host.emit('submit', { query: 'NVDA', windowDays: 14 })
-
-// Theme ('light' | 'dark'), locale, and CSS token lookup for Canvas 2D / SVG
-const accent = host.getToken('--kimi-chart-1') || '#1783FF'
-host.onThemeChange(() => redrawChart())
-```
-
-## Controlled File Resource Bridge (`DaimonWidget.files`)
-
-`window.DaimonWidget.files` (also aliased on `window.DaimonCanvas.files`) lets sandboxed Widgets pick large user CSV/Excel/binary files (up to 250 MiB streamed directly to the Host Resource Store), read/write small files or `workspace/...` assets, mint expiring preview URLs, and trigger native Save-As / browser downloads.
+The Blueprint iframe host pre-loads `window.DaimonWidget` before user scripts execute across inline chat, right-sidebar dock, enlarge modal, desktop pin, and Canvas tiles:
 
 ```ts
-interface FileResourceRef {
-  readonly kind: 'file'
-  readonly fileId: string
-  readonly name: string
-  readonly mimeType?: string
-  readonly sizeBytes: number
-  readonly sha256?: string
-  readonly source: 'user-upload' | 'widget-output' | 'automation-output' | 'imported'
-  readonly createdAt: string
+type Unsubscribe = () => void;
+
+interface DaimonWidgetRuntime {
+  readonly widgetId: string;
+  readonly title: string;
+  readonly data: Readonly<Record<string, any>>;      // data.main holds the bound slot payload
+  readonly status: 'idle' | 'running' | 'error' | 'degraded' | 'needs_input' | 'cancelled';
+  readonly inputState: { readonly currentInput?: Record<string, any> };
+  readonly theme: 'light' | 'dark';
+  readonly locale: string;
+  readonly tokens: Readonly<Record<string, string>>; // resolved --kimi-* CSS token values
+
+  getToken(name: string): string | undefined;
+  onDataChange(cb: (data: Readonly<Record<string, any>>) => void): Unsubscribe;
+  getSlot(slotName?: string): any;
+  onSlot(slotName: string, cb: (payload: any) => void): Unsubscribe;
+
+  onStatusChange(cb: (info: { status: string; message?: string | null }) => void): Unsubscribe;
+  onThemeChange(cb: (theme: 'light' | 'dark') => void): Unsubscribe;
+  onLocaleChange(cb: (locale: string) => void): Unsubscribe;
+
+  getSavedInput(): Record<string, any>;
+  saveInput(patch: Record<string, any>): void;
+  emit(eventName: string, payload?: Record<string, any>): void;
+
+  resize(explicitHeightPx?: number): void;
+  expand(): void;
+  readonly files: DaimonWidgetFiles;
 }
 ```
 
-```js
-// 1. Pick user file(s) -> returns FileResourceRef[] ([] when cancelled)
-const [inputFile] = await window.DaimonWidget.files.pick({
-  accept: ['.csv', 'text/csv'],
-  multiple: false,
-})
-if (inputFile) {
-  window.DaimonWidget.saveInput({ inputFile })
-  window.DaimonWidget.emit('submit', { inputFile })
-}
+### Recommended Usage Patterns
 
-// 2. Read UTF-8 text (<= 10 MiB on FileResourceRef) or base64 bytes (<= 25 MiB)
-const csvText = await window.DaimonWidget.files.readText(inputFile)
-const bin = await window.DaimonWidget.files.readBytes(inputFile) // { encoding: 'base64', data, sizeBytes }
+1. **Subscribing to Bound Data (`data.main`)**:
+   `onDataChange` invokes the callback immediately with the current snapshot and again whenever a bound `Automation` delivers fresh data:
+   ```js
+   window.DaimonWidget.onDataChange((data) => {
+     renderView(data.main || FALLBACK_DATA);
+   });
+   ```
+2. **Theme-Reactive Canvas 2D / Dynamic SVG Colors**:
+   Normal HTML/SVG should use CSS variables (`var(--kimi-chart-1)`, `.kimi-svg-chart-1`, etc.) so light/dark switches happen automatically with zero JS. When drawing on `<canvas>`, read live token values with `DaimonWidget.getToken('--kimi-chart-1')` and redraw inside `DaimonWidget.onThemeChange(() => draw())`.
+3. **Persisting User Controls & Triggering Bound Automations**:
+   - `DaimonWidget.saveInput({ symbol: 'NVDA', range: '1M' })` persists control state across reloads without starting an automation.
+   - `DaimonWidget.emit('submit', { symbol: 'NVDA' })` emits the declared `event:submit` payload to any bound `Automation` (`widget.event:submit -> automation.input`).
+4. **Notifying Dynamic Height Changes**:
+   A `ResizeObserver` already watches `document.body` and `document.documentElement`, and click/toggle events schedule automatic re-measurement. Call `DaimonWidget.resize()` if an asynchronous animation or timer changes content height.
 
-// 3. Create a managed output file (<= 50 MiB) and trigger user download / Save-As
-const reportRef = await window.DaimonWidget.files.write({
-  name: 'summary-report.csv',
-  mimeType: 'text/csv',
-  data: 'model,monthly_usd\nDeepSeek-V3,311.4\n',
-})
-await window.DaimonWidget.files.download(reportRef, {
-  suggestedFilename: reportRef.name,
-})
+## 2. Managed File API (`window.DaimonWidget.files`)
 
-// 4. Write/read persistent Widget workspace files (`workspace/...`) & preview URLs
-const written = await window.DaimonWidget.files.writeText('workspace/notes.json', '{"ok":true}')
-const previewUrl = await window.DaimonWidget.files.url(reportRef)
-```
+Widgets that accept user uploads or export generated artifacts use `FileResourceRef` objects (`{ kind: 'file', fileId, name, mimeType?, sizeBytes, sha256?, source, createdAt }`) — never raw local filesystem paths:
 
-Persist and submit only `FileResourceRef` JSON objects — never `File`, `Blob`, local filesystem paths, or temporary preview URLs. Python `code` Automations receive `ctx["resourcesDir"]` so large uploaded files can be streamed directly from `os.path.join(ctx["resourcesDir"], file_ref["fileId"], "payload")`.
+- `await DaimonWidget.files.pick({ accept?: '.csv,text/csv', multiple?: boolean })` -> `FileResourceRef[]` (`[]` if cancelled)
+- `await DaimonWidget.files.readText(fileRefOrWorkspacePath, { maxBytes? })` -> `{ text: string }`
+- `await DaimonWidget.files.readBytes(fileRefOrWorkspacePath, { maxBytes? })` -> `{ encoding: 'base64', data: string, sizeBytes: number, mimeType?: string }`
+- `await DaimonWidget.files.write({ name, mimeType?, data })` -> `FileResourceRef`
+- `await DaimonWidget.files.writeText('workspace/notes.txt', contents)` -> `void`
+- `await DaimonWidget.files.url(fileRef)` -> `{ url: string }` (capability-scoped blob preview URL)
+- `await DaimonWidget.files.download(fileRef, { suggestedFilename? })` -> `{ cancelled: boolean, fileRef?: FileResourceRef }`
 
-## Desktop Floating Pin Window (`桌面置顶`) Layout Rule
+## 3. Canvas Placement Surface (`window.DaimonCanvas`)
 
-Users can pin any Widget into a standalone always-on-top floating window (`桌面置顶`). Desktop Pin Windows render a 32px draggable header bar above the Widget frame, and responsive size tiers (`compact` / `regular` / `expanded`) are reflected live on `<html data-daimon-size-tier="...">`. Keep interactive controls clear of the top edge or allow clean reflow across `compact` (`< 300px` wide) and `regular` viewports.
-
-## Declaring `slots` and `events` on `Widget`
-
-When a widget connects to an `Automation` through `Binding`, declare JSON Schemas on the widget:
-
-- `slots.main.schema`: JSON Schema of the object rendered by the widget.
-- `events.submit.schema`: JSON Schema of the payload emitted via `DaimonWidget.emit('submit', payload)`.
+- `DaimonCanvas.viewState` / `DaimonCanvas.setViewState(patch)` / `DaimonCanvas.onViewStateChange(cb)`: placement-local UI state (selected tab or local filter) without mutating shared `Widget` data.
+- `DaimonCanvas.openDashboard(canvasId?)`: opens the owning dashboard in the right panel.
+- `DaimonCanvas.expand()`: opens the enlarged modal view for dense inspection.
