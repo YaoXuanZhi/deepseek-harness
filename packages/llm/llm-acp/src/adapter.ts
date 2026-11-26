@@ -15,6 +15,7 @@ import {
   type McpServer,
 } from '@agentclientprotocol/sdk'
 import { brandString } from '@deepseek-ai/dsh-brand'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import {
   LlmAdapter,
   LlmError,
@@ -74,8 +75,10 @@ function formatHistoryMessage(msg: RequestMessage): string {
         parts.push(block.text)
       } else if (block.type === 'file') {
         parts.push(`[file: ${block.attachment.name} (${String(block.attachment.bytes)} bytes)]`)
-      } else if (block.type === 'image' && block.offloaded) {
-        parts.push(`[offloaded image: ${block.attachment.attachmentId}]`)
+      } else if (block.type === 'image') {
+        parts.push(block.offloaded
+          ? `[offloaded image: ${block.attachment.attachmentId}]`
+          : `[attached image: ${block.attachment.name ?? block.attachment.attachmentId}]`)
       }
     }
     return parts.length > 0 ? `<user>\n${parts.join('\n')}\n</user>` : ''
@@ -95,23 +98,35 @@ function formatHistoryMessage(msg: RequestMessage): string {
 
   const parts: string[] = []
   for (const block of msg.content) {
-    if (block.type === 'text') parts.push(block.text)
+    if (block.type === 'text') {
+      parts.push(block.text)
+    } else if (block.type === 'image') {
+      parts.push(block.offloaded
+        ? `[offloaded image: ${block.attachment.attachmentId}]`
+        : `[attached image: ${block.attachment.name ?? block.attachment.attachmentId}]`)
+    }
   }
   const errAttr = msg.isError ? ' is_error="true"' : ''
   return `<tool_result call_id="${msg.toolCallId}"${errAttr}>\n${parts.join('\n')}\n</tool_result>`
 }
 
+/** Reader returning base64 bytes and verified MIME type for a stored `ImageAttachmentRef`. */
+export type AcpImageBytesReader = (
+  ref: ImageAttachmentRef,
+  signal?: AbortSignal,
+) => Promise<{ readonly data: string; readonly mimeType: string } | undefined>
+
 /**
  * Assemble DeepSeek Harness `GenerateOptions` into ordered ACP `ContentBlock[]`.
  * @param options - Full DSH model call options.
  * @param includeFallbackTools - Inject `<dsh_tool_call>` instructions when HTTP MCP is unavailable.
- * @param readImageBytes - Optional reader returning base64 bytes + MIME type for an `ImageAttachmentRef` id.
+ * @param readImageBytes - Optional reader returning base64 bytes + MIME type for an `ImageAttachmentRef`.
  * @returns Ordered ACP prompt content blocks.
  */
 export async function buildAcpPromptBlocks(
   options: GenerateOptions,
   includeFallbackTools: boolean,
-  readImageBytes?: (attachmentId: string) => Promise<{ readonly data: string; readonly mimeType: string } | undefined>,
+  readImageBytes?: AcpImageBytesReader,
 ): Promise<AcpContentBlock[]> {
   const sections: string[] = []
   if (options.system?.trim()) {
@@ -133,10 +148,10 @@ export async function buildAcpPromptBlocks(
   for (let i = 0; i < msgs.length; i += 1) {
     const m = msgs[i]
     if (!m) continue
-    if (m.role === 'user' && readImageBytes) {
+    if ((m.role === 'user' || m.role === 'tool') && readImageBytes) {
       for (const b of m.content) {
         if (b.type === 'image' && !b.offloaded) {
-          const loaded = await readImageBytes(b.attachment.attachmentId).catch(() => undefined)
+          const loaded = await readImageBytes(b.attachment, options.signal).catch(() => undefined)
           if (loaded) {
             imageBlocks.push({
               type: 'image',
@@ -177,7 +192,7 @@ export async function buildAcpPromptBlocks(
 export class AcpLlmAdapter extends LlmAdapter {
   constructor(
     private readonly getProvider: (providerId: string) => ResolvedAcpProviderRuntime | undefined,
-    private readonly readImageBytes?: (attachmentId: string) => Promise<{ readonly data: string; readonly mimeType: string } | undefined>,
+    private readonly readImageBytes?: AcpImageBytesReader,
   ) {
     super()
   }

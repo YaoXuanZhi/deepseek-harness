@@ -19,9 +19,9 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import type { AdapterRegistrationHandle } from '@deepseek-ai/dsh-llm'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import type {} from '@deepseek-ai/dsh-attachment'
-import type {} from '@deepseek-ai/dsh-credentials'
-import type {} from '@deepseek-ai/dsh-subprocess'
+import type { } from '@deepseek-ai/dsh-attachment'
+import type { } from '@deepseek-ai/dsh-credentials'
+import type { } from '@deepseek-ai/dsh-subprocess'
 import { AcpLlmAdapter, type ResolvedAcpProviderRuntime } from './adapter.ts'
 import { detectLocalAcpAgents } from './local-discovery.ts'
 import {
@@ -213,7 +213,7 @@ export class AcpLlmService extends TypertRemoteService {
         this.ctx.emit('llm-acp/changed', this.revision)
       },
       async (providerId) => {
-        await this.probeProvider(providerId).catch(() => {})
+        await this.probeProvider(providerId).catch(() => { })
       },
     )
     this.loadFromDiskSync()
@@ -223,15 +223,31 @@ export class AcpLlmService extends TypertRemoteService {
   protected [TypertRemoteService.init](): void {
     const adapter = new AcpLlmAdapter(
       providerId => this.resolveProviderRuntime(providerId),
-      async (attachmentId) => {
-        const attachments = this.ctx.get('attachments') as {
-          readBytes?: (id: string) => Promise<{ bytes: Uint8Array; mimeType: string }>
-        } | undefined
-        if (!attachments?.readBytes) return undefined
-        const res = await attachments.readBytes(attachmentId)
-        return {
-          data: Buffer.from(res.bytes).toString('base64'),
-          mimeType: res.mimeType,
+      async (ref, signal) => {
+        const attachments = this.ctx.get('attachments')
+        if (!attachments) return undefined
+        const maxDim = 2048
+        const scale = Math.min(1, maxDim / Math.max(1, ref.width, ref.height))
+        const target = {
+          width: Math.max(1, Math.round(ref.width * scale)),
+          height: Math.max(1, Math.round(ref.height * scale)),
+          maxImageBytes: 4 * 1024 * 1024,
+          imageTargetBytes: 1_500_000,
+        }
+        try {
+          const version = await attachments.readImageRequest(ref, target, signal)
+          return {
+            data: Buffer.from(version.data).toString('base64'),
+            mimeType: version.mediaType,
+          }
+        } catch (err) {
+          if (signal?.aborted) throw err
+          // Minimal attachment backends may only implement `readImage` without request-image projection.
+          const stored = await attachments.readImage(ref, signal)
+          return {
+            data: Buffer.from(stored.data).toString('base64'),
+            mimeType: stored.ref.mediaType,
+          }
         }
       },
     )
@@ -262,7 +278,7 @@ export class AcpLlmService extends TypertRemoteService {
     }
   }
 
-  private syncAdapterRoutes: () => void = () => {}
+  private syncAdapterRoutes: () => void = () => { }
 
   private enabledRouteIds(): string[] {
     return [...this.providers.values()]
@@ -723,7 +739,7 @@ export class AcpLlmService extends TypertRemoteService {
           status: 'succeeded',
         }
         this.authFlows.set(flowId, doneFlow)
-        await this.probeProvider(id).catch(() => {})
+        await this.probeProvider(id).catch(() => { })
         this.revision += 1
         this.ctx.emit('llm-acp/changed', this.revision)
         resolveEarly?.(doneFlow)

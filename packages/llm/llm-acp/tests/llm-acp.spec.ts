@@ -6,6 +6,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import type { AttachmentId, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import LlmPlugin, { type StreamChunk } from '@deepseek-ai/dsh-llm'
 import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -136,6 +138,21 @@ createAcpAgent({ name: 'mock-sub-acp', version: '1.2.0' })
       .filter(b => b.type === 'text')
       .map(b => b.text)
       .join('\\n')
+
+    const images = (params.prompt || []).filter(b => b.type === 'image')
+    if (images.length > 0) {
+      await client.notify(methods.client.session.update, {
+        sessionId: params.sessionId,
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: {
+            type: 'text',
+            text: 'Saw ' + images.length + ' image(s): ' + images.map(i => i.mimeType + ':' + i.data).join(','),
+          },
+        },
+      })
+      return { stopReason: 'end_turn' }
+    }
 
     await client.notify(methods.client.session.update, {
       sessionId: params.sessionId,
@@ -613,4 +630,85 @@ describe('@deepseek-ai/dsh-llm-acp', () => {
     )
     expect(afterConfigured[0]?.alreadyConfigured).toBe(true)
   })
+
+  it('forwards user and tool image attachments from ctx.attachments into ACP session/prompt image blocks', async () => {
+    const root = makeTempRoot()
+    const agentScriptPath = join(root, 'mock-acp-image-agent.mjs')
+    writeFileSync(agentScriptPath, MOCK_ACP_AGENT_SOURCE, 'utf8')
+
+    const samplePng = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+    const imageRef: ImageAttachmentRef = {
+      attachmentId: brandString<AttachmentId>(`sha256:${'a'.repeat(64)}`),
+      mediaType: 'image/png',
+      bytes: samplePng.byteLength,
+      width: 64,
+      height: 64,
+      name: 'portrait.png',
+    }
+
+    const ctx = new Context()
+    let readImageRequestCalls = 0
+    ctx.provide('attachments', {
+      readImageRequest: async (ref: ImageAttachmentRef) => {
+        readImageRequestCalls += 1
+        return {
+          variantId: 'v1' as never,
+          attachment: ref,
+          data: samplePng,
+          mediaType: 'image/png' as const,
+          bytes: samplePng.byteLength,
+          width: 64,
+          height: 64,
+          depth: 'uchar' as const,
+          space: 'srgb' as const,
+          hasAlpha: false,
+        }
+      },
+      readImage: async (ref: ImageAttachmentRef) => ({ ref, data: samplePng }),
+    } as never)
+    await ctx.plugin(LlmPlugin)
+    await ctx.plugin(AcpLlmService, {
+      registryRoot: join(root, 'acp-registry'),
+      probeTimeoutMs: 15_000,
+    })
+
+    try {
+      const saved = await ctx.llmAcp.upsertProvider({
+        id: 'vision-acp',
+        displayName: 'Vision ACP',
+        source: 'local',
+        command: process.execPath,
+        args: [agentScriptPath],
+        autoProbe: true,
+      })
+      expect(saved.status).toBe('ready')
+      expect(saved.supportsImages).toBe(true)
+
+      const chunks: StreamChunk[] = []
+      for await (const chunk of ctx.llm.stream({
+        provider: 'vision-acp',
+        model: 'claude-sonnet-4-5',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', attachment: imageRef },
+              { type: 'text', text: 'Describe this image' },
+            ],
+          },
+        ],
+      })) {
+        chunks.push(chunk)
+      }
+
+      const reply = chunks
+        .filter((c): c is Extract<StreamChunk, { type: 'text-delta' }> => c.type === 'text-delta')
+        .map(c => c.text)
+        .join('')
+      expect(readImageRequestCalls).toBe(1)
+      expect(reply).toBe(`Saw 1 image(s): image/png:${samplePng.toString('base64')}`)
+    } finally {
+      ctx.registry.delete(AcpLlmService)
+    }
+  }, 20_000)
 })
