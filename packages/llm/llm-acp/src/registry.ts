@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve as resolvePath } from 'node:path'
 import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
+import { decodeSubprocessBytes } from './probe-auth.ts'
 import type {
   AcpRegistryAgentSummary,
   AcpRegistryDistributionKind,
@@ -180,8 +181,8 @@ function runCommandCollect(
   options: { readonly cwd: string; readonly env?: NodeJS.ProcessEnv; readonly timeoutMs: number },
 ): Promise<{ readonly stdout: string; readonly stderr: string }> {
   return new Promise((resolveCmd, rejectCmd) => {
-    let stdout = ''
-    let stderr = ''
+    const stdoutChunks: Buffer[] = []
+    const stderrChunks: Buffer[] = []
     let settled = false
     const child = spawn(command, [...args], {
       cwd: options.cwd,
@@ -196,8 +197,8 @@ function runCommandCollect(
         rejectCmd(new Error(`Command "${command}" timed out after ${String(options.timeoutMs)}ms`))
       }
     }, options.timeoutMs)
-    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8') })
-    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
+    child.stdout.on('data', (chunk: Buffer) => { stdoutChunks.push(chunk) })
+    child.stderr.on('data', (chunk: Buffer) => { stderrChunks.push(chunk) })
     child.on('error', (err) => {
       if (settled) return
       settled = true
@@ -208,6 +209,8 @@ function runCommandCollect(
       if (settled) return
       settled = true
       clearTimeout(timer)
+      const stdout = decodeSubprocessBytes(Buffer.concat(stdoutChunks))
+      const stderr = decodeSubprocessBytes(Buffer.concat(stderrChunks))
       if (code !== 0) {
         const tail = (stderr.trim() || stdout.trim()).slice(-800)
         rejectCmd(new Error(`Command "${command}" exited with code ${String(code)}${tail ? `: ${tail}` : ''}`))

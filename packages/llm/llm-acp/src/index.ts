@@ -23,9 +23,11 @@ import type {} from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-subprocess'
 import { AcpLlmAdapter, type ResolvedAcpProviderRuntime } from './adapter.ts'
+import { detectLocalAcpAgents } from './local-discovery.ts'
 import {
   deriveDefaultTerminalLoginCommand,
   launchTerminalSubscriptionLogin,
+  normalizeAcpSpawnCommand,
   probeAcpAgent,
   runAcpAuthenticateFlow,
   type AcpSpawnTarget,
@@ -370,9 +372,10 @@ export class AcpLlmService extends TypertRemoteService {
   }
 
   private buildSpawnTarget(record: PersistedAcpProviderRecord): AcpSpawnTarget {
+    const normalized = normalizeAcpSpawnCommand(record.command, record.args)
     return {
-      command: record.command,
-      args: record.args,
+      command: normalized.command,
+      args: normalized.args,
       cwd: this.sandboxCwd,
       env: this.buildSpawnEnv(record),
     }
@@ -431,11 +434,13 @@ export class AcpLlmService extends TypertRemoteService {
    */
   @Remote('catalog')
   catalog(): Promise<AcpLlmCatalog> {
+    const providers = [...this.providers.values()]
     return Promise.resolve({
       revision: this.revision,
-      providers: [...this.providers.values()].map(p => this.toProviderView(p)),
+      providers: providers.map(p => this.toProviderView(p)),
       authFlows: [...this.authFlows.values()],
       terminalSessions: this.ptyAuthManager.listViews(),
+      detectedLocalAgents: detectLocalAcpAgents(providers),
     })
   }
 
@@ -523,6 +528,10 @@ export class AcpLlmService extends TypertRemoteService {
       }
     } else if (!command) {
       throw new RemoteError('llm-acp/invalid-argument', 'Executable command is required for local ACP providers', {})
+    } else {
+      const normalized = normalizeAcpSpawnCommand(command, args)
+      command = normalized.command
+      args = normalized.args
     }
 
     // Merge env & write-only secrets constructively (no dynamic property deletion)
@@ -627,11 +636,15 @@ export class AcpLlmService extends TypertRemoteService {
       throw new RemoteError('llm-acp/not-found', `ACP provider "${providerId}" not found`, {})
     }
 
-    const snap = await probeAcpAgent(this.buildSpawnTarget(current), this.probeTimeoutMs)
+    const target = this.buildSpawnTarget(current)
+    const snap = await probeAcpAgent(target, this.probeTimeoutMs)
     const mergedModels = snap.models.length > 0 ? snap.models : current.models
     const { statusMessage: _oldMsg, ...rest } = current
+    const shouldPersistNormalized = current.source === 'local'
+      && (snap.status === 'ready' || snap.status === 'auth_required')
     const updated: PersistedAcpProviderRecord = {
       ...rest,
+      ...(shouldPersistNormalized ? { command: target.command, args: target.args } : {}),
       models: mergedModels,
       reasoningEfforts: snap.reasoningEfforts.length > 0 ? snap.reasoningEfforts : current.reasoningEfforts,
       ...(snap.modelConfigOptionId === undefined ? {} : { modelConfigOptionId: snap.modelConfigOptionId }),

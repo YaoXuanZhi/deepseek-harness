@@ -6,7 +6,9 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { delimiter, join } from 'node:path'
 import { Readable as NodeReadable, Writable as NodeWritable } from 'node:stream'
 import {
   client as createAcpClientApp,
@@ -46,10 +48,231 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+const MAX_STDERR_BYTES = 16_384
+
+/**
+ * Decode raw subprocess output bytes cleanly: prefers strict UTF-8 and falls back to
+ * `gb18030` (a superset of Windows CP936/GBK) on Windows when `cmd.exe` emits localized
+ * system diagnostics in the active ANSI code page.
+ * @param bytes - Raw bytes emitted on subprocess stdout or stderr.
+ * @param platform - Target OS platform (defaults to `process.platform`).
+ * @returns Decoded string without UTF-8 replacement mojibake for GBK/CP936 output.
+ */
+export function decodeSubprocessBytes(
+  bytes: Uint8Array,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  if (bytes.byteLength === 0) return ''
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch (_utf8Err) {
+    // Bytes are not valid UTF-8; fall back to Windows ANSI code page below.
+  }
+  if (platform === 'win32') {
+    try {
+      return new TextDecoder('gb18030').decode(bytes)
+    } catch (_gbErr) {
+      // ICU data may omit gb18030 in minimal builds; fall back to lossy UTF-8.
+    }
+  }
+  return new TextDecoder('utf-8').decode(bytes)
+}
+
+/**
+ * Split a command line string into argv tokens while preserving quoted segments
+ * and Windows backslash path separators.
+ * @param raw - Raw command line string.
+ * @returns Parsed token list.
+ */
+export function splitCommandTokens(raw: string): string[] {
+  const tokens: string[] = []
+  let current = ''
+  let quote: '"' | '\'' | null = null
+  let inToken = false
+
+  for (let i = 0; i < raw.length; i += 1) {
+    const ch = raw[i] ?? ''
+    if (quote !== null) {
+      if (ch === '\\' && quote === '"' && raw[i + 1] === '"') {
+        current += '"'
+        i += 1
+      } else if (ch === quote) {
+        quote = null
+      } else {
+        current += ch
+      }
+      continue
+    }
+    if (ch === '"' || ch === '\'') {
+      quote = ch
+      inToken = true
+      continue
+    }
+    if (/\s/.test(ch)) {
+      if (inToken) {
+        tokens.push(current)
+        current = ''
+        inToken = false
+      }
+      continue
+    }
+    current += ch
+    inToken = true
+  }
+  if (inToken) {
+    tokens.push(current)
+  }
+  return tokens
+}
+
+function isExistingFile(filePath: string): boolean {
+  try {
+    return existsSync(filePath) && statSync(filePath).isFile()
+  } catch (_statErr) {
+    // Path may be inaccessible or syntactically invalid on the host OS.
+    return false
+  }
+}
+
+function findExecutableInDir(
+  dir: string,
+  commandName: string,
+  platform: NodeJS.Platform,
+  pathExts: readonly string[],
+): string | undefined {
+  if (platform === 'win32' && !/\.[a-z0-9]+$/i.test(commandName)) {
+    for (const ext of pathExts) {
+      const candidate = join(dir, `${commandName}${ext}`)
+      if (isExistingFile(candidate)) return candidate
+    }
+  }
+  const direct = join(dir, commandName)
+  if (isExistingFile(direct)) return direct
+  return undefined
+}
+
+/** Options controlling local executable lookup during spawn normalization. */
+export interface ResolveExecutableOptions {
+  /** Override user home directory (defaults to `os.homedir()`). */
+  readonly homeDir?: string
+  /** Override host platform (defaults to `process.platform`). */
+  readonly platform?: NodeJS.Platform
+  /** Override `PATH` search string (defaults to `process.env.PATH`). */
+  readonly envPath?: string
+  /** Override Windows `PATHEXT` search list. */
+  readonly pathExt?: string
+}
+
+/**
+ * Resolve a bare executable name (such as `agy`) against `PATH` and well-known user CLI
+ * installation directories (such as `~/.gemini/bin`, `~/.local/bin`, `~/.cargo/bin`) so
+ * locally installed ACP CLIs work even when their directory is absent from the daemon `PATH`.
+ * @param command - Executable path or bare command name.
+ * @param options - Optional host path overrides for deterministic testing.
+ * @returns Resolved executable path when found in a well-known local bin directory, otherwise the input command.
+ */
+export function resolveKnownLocalExecutable(
+  command: string,
+  options?: ResolveExecutableOptions,
+): string {
+  const trimmed = command.trim()
+  if (!trimmed) return ''
+  if (trimmed.includes('/') || trimmed.includes('\\') || isExistingFile(trimmed)) {
+    return trimmed
+  }
+
+  const platform = options?.platform ?? process.platform
+  const home = options?.homeDir ?? homedir()
+  const pathStr = options?.envPath ?? process.env.PATH ?? ''
+  const pathSep = platform === 'win32' ? ';' : delimiter
+  const rawExts = (options?.pathExt ?? process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM')
+    .split(';')
+    .map(e => e.trim().toLowerCase())
+    .filter(e => e.startsWith('.'))
+  const pathExts = rawExts.length > 0 ? rawExts : ['.exe', '.cmd', '.bat', '.com']
+
+  // Check PATH first; if already resolvable on PATH, keep the original command name
+  // (or resolved .exe path on Windows to skip cmd.exe wrapper overhead).
+  for (const dir of pathStr.split(pathSep).map(d => d.trim()).filter(Boolean)) {
+    const found = findExecutableInDir(dir, trimmed, platform, pathExts)
+    if (found) {
+      return platform === 'win32' && /\.(exe|com)$/i.test(found) ? found : trimmed
+    }
+  }
+
+  const extraDirs: string[] = [
+    join(home, '.gemini', 'bin'),
+    join(home, '.local', 'bin'),
+    join(home, '.cargo', 'bin'),
+    join(home, '.opencode', 'bin'),
+    join(home, '.bun', 'bin'),
+  ]
+  if (platform === 'win32') {
+    extraDirs.push(
+      join(home, 'AppData', 'Roaming', 'npm'),
+      join(home, 'AppData', 'Local', 'Programs', 'antigravity', 'bin'),
+    )
+  }
+
+  for (const dir of extraDirs) {
+    const found = findExecutableInDir(dir, trimmed, platform, pathExts)
+    if (found) return found
+  }
+  return trimmed
+}
+
+/**
+ * Split an inline command string (such as `"agy acp"`) into executable + arguments when the
+ * literal string is not an existing file path, preserving paths that contain spaces.
+ * @param rawCommand - Raw command string entered by the user or loaded from config.
+ * @param rawArgs - Separate argument list configured alongside `rawCommand`.
+ * @returns Normalized `{ command, args }` pair without host directory lookup.
+ */
+export function splitInlineAcpCommand(
+  rawCommand: string,
+  rawArgs: readonly string[],
+): { readonly command: string; readonly args: readonly string[] } {
+  const trimmed = rawCommand.trim()
+  if (!trimmed) return { command: '', args: [...rawArgs] }
+  if (/\s/.test(trimmed) && !isExistingFile(trimmed)) {
+    const tokens = splitCommandTokens(trimmed)
+    const first = tokens[0]
+    if (first) {
+      return {
+        command: first,
+        args: [...tokens.slice(1), ...rawArgs],
+      }
+    }
+  }
+  return { command: trimmed, args: [...rawArgs] }
+}
+
+/**
+ * Normalize an ACP provider command and argument list: splits inline subcommands entered in the
+ * command field (for example `"agy acp"` -> `command: "agy"`, `args: ["acp"]`) and resolves
+ * well-known local CLI binaries (such as `~/.gemini/bin/agy.exe`) when absent from `PATH`.
+ * @param rawCommand - Raw command string.
+ * @param rawArgs - Separate argument list.
+ * @param options - Optional host path overrides for deterministic testing.
+ * @returns Normalized executable path and argument array ready to spawn.
+ */
+export function normalizeAcpSpawnCommand(
+  rawCommand: string,
+  rawArgs: readonly string[],
+  options?: ResolveExecutableOptions,
+): { readonly command: string; readonly args: readonly string[] } {
+  const split = splitInlineAcpCommand(rawCommand, rawArgs)
+  if (!split.command) return split
+  return {
+    command: resolveKnownLocalExecutable(split.command, options),
+    args: split.args,
+  }
+}
+
 /**
  * Spawn an ACP child process with piped stdio and a cooperative teardown function.
  * @param target - Command, arguments, working directory, and environment variables.
- * @param onStderrChunk - Optional callback receiving UTF-8 stderr text chunks.
+ * @param onStderrChunk - Optional callback receiving decoded stderr text chunks.
  * @returns Spawned child process, piped stdin/stdout, and async `dispose` callback.
  */
 export function spawnAcpChildProcess(
@@ -63,14 +286,15 @@ export function spawnAcpChildProcess(
   readonly dispose: () => Promise<void>
 } {
   mkdirSync(target.cwd, { recursive: true })
+  const normalized = normalizeAcpSpawnCommand(target.command, target.args)
   const mergedEnv: NodeJS.ProcessEnv = {
     ...process.env,
     ...target.env,
   }
-  const needsWinShell = process.platform === 'win32' && !/\.(exe|com)$/i.test(target.command)
+  const needsWinShell = process.platform === 'win32' && !/\.(exe|com)$/i.test(normalized.command)
   const child = needsWinShell
     ? spawn(
-      [shellQuote(target.command), ...target.args.map(shellQuote)].join(' '),
+      [shellQuote(normalized.command), ...normalized.args.map(shellQuote)].join(' '),
       [],
       {
         cwd: target.cwd,
@@ -80,17 +304,24 @@ export function spawnAcpChildProcess(
         shell: true,
       },
     )
-    : spawn(target.command, [...target.args], {
+    : spawn(normalized.command, [...normalized.args], {
       cwd: target.cwd,
       env: mergedEnv,
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
     })
-  let stderrTail = ''
+  const stderrChunks: Buffer[] = []
+  let stderrByteLen = 0
   child.stderr.on('data', (chunk: Buffer) => {
-    const text = chunk.toString('utf8')
-    stderrTail = (stderrTail + text).slice(-4_000)
-    onStderrChunk?.(text)
+    stderrChunks.push(chunk)
+    stderrByteLen += chunk.byteLength
+    while (stderrByteLen > MAX_STDERR_BYTES && stderrChunks.length > 1) {
+      const removed = stderrChunks.shift()
+      if (removed) stderrByteLen -= removed.byteLength
+    }
+    if (onStderrChunk) {
+      onStderrChunk(decodeSubprocessBytes(chunk))
+    }
   })
 
   let disposed = false
@@ -136,7 +367,14 @@ export function spawnAcpChildProcess(
     child,
     stdin: child.stdin,
     stdout: child.stdout,
-    getStderrTail: () => stderrTail.trim(),
+    getStderrTail: () => {
+      if (stderrChunks.length === 0) return ''
+      const combined = Buffer.concat(stderrChunks)
+      const tailBytes = combined.byteLength > MAX_STDERR_BYTES
+        ? combined.subarray(combined.byteLength - MAX_STDERR_BYTES)
+        : combined
+      return decodeSubprocessBytes(tailBytes).slice(-4_000).trim()
+    },
     dispose,
   }
 }
@@ -167,7 +405,8 @@ export function deriveDefaultTerminalLoginCommand(
   if (explicitTerm?.terminalCommand) {
     return explicitTerm.terminalCommand.trim()
   }
-  const interactiveArgs = target.args.filter(arg => !ACP_SERVER_SUBCOMMANDS.has(arg.toLowerCase()))
+  const split = splitInlineAcpCommand(target.command, target.args)
+  const interactiveArgs = split.args.filter(arg => !ACP_SERVER_SUBCOMMANDS.has(arg.toLowerCase()))
   const hintsLoginSubcommand = authMethods.some((m) => {
     const haystack = `${m.id} ${m.description ?? ''}`.toLowerCase()
     return haystack.includes('_login') || /\blogin\b/.test(haystack)
@@ -175,7 +414,7 @@ export function deriveDefaultTerminalLoginCommand(
   const finalArgs = hintsLoginSubcommand && !interactiveArgs.some(a => a.toLowerCase() === 'login')
     ? [...interactiveArgs, 'login']
     : interactiveArgs
-  return [target.command, ...finalArgs].map(shellQuote).join(' ')
+  return [split.command, ...finalArgs].map(shellQuote).join(' ')
 }
 
 function normalizeAuthMethods(

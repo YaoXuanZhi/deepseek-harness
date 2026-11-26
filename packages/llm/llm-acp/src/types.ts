@@ -224,6 +224,24 @@ export interface AcpTerminalAuthSessionView {
   readonly startedAt: string
 }
 
+/** Local ACP-compatible CLI discovered on the host machine. */
+export interface DetectedLocalAcpAgent {
+  /** Suggested provider route identifier (for example `agy-acp`). */
+  readonly id: string
+  /** Human-readable display name (for example `Antigravity ACP`). */
+  readonly displayName: string
+  /** Resolved executable path or command name. */
+  readonly command: string
+  /** Default command-line arguments required to start ACP stdio mode (for example `['acp']`). */
+  readonly args: readonly string[]
+  /** Whether existing local subscription credentials were detected on disk. */
+  readonly authDetected: boolean
+  /** Directory or file path where local credentials were detected, when present. */
+  readonly authPath?: string
+  /** Whether a configured ACP provider already matches this local CLI. */
+  readonly alreadyConfigured: boolean
+}
+
 /** Complete catalog snapshot returned by `ctx.remote.llmAcp.catalog()`. */
 export interface AcpLlmCatalog {
   /** Monotonic state revision counter. */
@@ -234,6 +252,8 @@ export interface AcpLlmCatalog {
   readonly authFlows: readonly AcpAuthFlowView[]
   /** Active or recent embedded PTY sign-in terminal sessions. */
   readonly terminalSessions?: readonly AcpTerminalAuthSessionView[]
+  /** Local ACP-compatible CLIs auto-detected on the host machine. */
+  readonly detectedLocalAgents?: readonly DetectedLocalAcpAgent[]
 }
 
 /** Input payload for creating or updating an ACP LLM provider. */

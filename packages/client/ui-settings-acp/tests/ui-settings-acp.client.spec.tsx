@@ -120,15 +120,15 @@ describe('@deepseek-ai/dsh-client-ui-settings-acp', () => {
     fireEvent.click(screen.getByRole('button', { name: /Claude Pro\/Max Browser Login/ }))
     await waitFor(() => { expect(startAuth).toHaveBeenCalledWith('claude-acp', 'oauth') })
 
-    fireEvent.click(screen.getByRole('button', { name: '打开终端完成订阅登录' }))
+    fireEvent.click(screen.getByRole('button', { name: zh['auth.openTerminal'] }))
     await waitFor(() => {
-      expect(launchTerminalLogin).toHaveBeenCalledWith(
-        'claude-acp',
-        'npx -y @zed-industries/claude-agent-acp@1.0.4',
-      )
+      expect(launchTerminalLogin).toHaveBeenCalledWith('claude-acp', undefined)
     })
 
-    fireEvent.click(screen.getByRole('button', { name: '我已登录 · 探测模型' }))
+    const probeButtons = screen.getAllByRole('button', { name: zh['auth.doneProbe'] })
+    const authProbeButton = probeButtons.at(-1)
+    expect(authProbeButton).toBeTruthy()
+    if (authProbeButton) fireEvent.click(authProbeButton)
     await waitFor(() => { expect(probeProvider).toHaveBeenCalledWith('claude-acp') })
 
     // 3. Open "+ 添加 ACP 授权服务" -> searches Registry automatically & installs Codex ACP
@@ -142,6 +142,63 @@ describe('@deepseek-ai/dsh-client-ui-settings-acp', () => {
         source: 'registry',
         registryAgentId: 'codex-acp',
       }))
+    })
+  })
+
+  it('surfaces auto-detected local ACP CLIs with auth status and supports 1-click add', async () => {
+    const state: AcpSettingsClientState = {
+      loaded: true,
+      catalog: {
+        revision: 2,
+        providers: [],
+        authFlows: [],
+        detectedLocalAgents: [
+          {
+            id: 'agy-acp',
+            displayName: 'Antigravity ACP',
+            command: 'C:\\Users\\demo\\.gemini\\bin\\agy.exe',
+            args: ['acp'],
+            authDetected: true,
+            authPath: 'C:\\Users\\demo\\.gemini\\antigravity-acp',
+            alreadyConfigured: false,
+          },
+        ],
+      },
+    }
+    const upsertProvider = vi.fn().mockResolvedValue(makeSampleProvider({
+      id: brandString<AcpLlmProviderId>('agy-acp'),
+      displayName: 'Antigravity ACP',
+      source: 'local',
+      status: 'ready',
+    }))
+
+    render(
+      <AcpSettingsFooter
+        useAcpState={selector => selector(state)}
+        searchRegistry={vi.fn().mockResolvedValue([])}
+        upsertProvider={upsertProvider}
+        removeProvider={vi.fn().mockResolvedValue(undefined)}
+        probeProvider={vi.fn().mockResolvedValue(makeSampleProvider({ status: 'ready' }))}
+        startAuth={vi.fn()}
+        launchTerminalLogin={vi.fn()}
+        t={makeT()}
+      />,
+    )
+
+    expect(screen.getByText(zh['detected.title'])).toBeTruthy()
+    expect(screen.getByText('Antigravity ACP')).toBeTruthy()
+    expect(screen.getByText(zh['detected.authReady'])).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: zh['detected.add'] }))
+    await waitFor(() => {
+      expect(upsertProvider).toHaveBeenCalledWith({
+        id: 'agy-acp',
+        displayName: 'Antigravity ACP',
+        source: 'local',
+        command: 'C:\\Users\\demo\\.gemini\\bin\\agy.exe',
+        args: ['acp'],
+        autoProbe: true,
+      })
     })
   })
 })

@@ -12,6 +12,7 @@ import type {
   AcpRegistryAgentSummary,
   AcpRegistryDistributionKind,
   AcpTerminalAuthSessionView,
+  DetectedLocalAcpAgent,
   UpsertAcpProviderInput,
 } from '@deepseek-ai/dsh-llm-acp/client'
 import type {} from './locales.ts'
@@ -97,10 +98,14 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
   const providers = state.catalog.providers
   const authFlows = state.catalog.authFlows
   const terminalSessions = state.catalog.terminalSessions ?? []
+  const detectedLocalAgents = state.catalog.detectedLocalAgents ?? []
+  const unconfiguredLocalAgents = detectedLocalAgents.filter(a => !a.alreadyConfigured)
 
   const modeControlId = useId()
   const [addOpen, setAddOpen] = useState(false)
   const [addMode, setAddMode] = useState<'registry' | 'local'>('registry')
+  const [addingLocalId, setAddingLocalId] = useState<string | null>(null)
+  const [localDetectError, setLocalDetectError] = useState<string | null>(null)
 
   // Registry search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -159,17 +164,47 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
     }
   }, [addMode, addOpen, searchQuery, searchRegistry])
 
-  const openCreateLocal = (): void => {
+  const openCreateLocal = (preset?: DetectedLocalAcpAgent): void => {
     setEditingProviderId(null)
-    setDraftId('')
-    setDraftName('')
+    setDraftId(preset?.id ?? '')
+    setDraftName(preset?.displayName ?? '')
     setDraftSource('local')
     setDraftRegistryId('')
-    setDraftCommand('')
-    setDraftArgs('')
+    setDraftCommand(preset?.command ?? '')
+    setDraftArgs(preset ? preset.args.join(' ') : '')
     setDraftEnv([])
     setDraftModels([])
     setFormError(null)
+  }
+
+  const handleQuickAddLocal = async (agent: DetectedLocalAcpAgent): Promise<void> => {
+    setAddingLocalId(agent.id)
+    setLocalDetectError(null)
+    try {
+      const baseSlug = sanitizeProviderSlug(agent.id)
+      let uniqueId = baseSlug
+      let suffix = 2
+      while (providers.some(p => p.id === uniqueId)) {
+        uniqueId = `${baseSlug}-${String(suffix)}`
+        suffix += 1
+      }
+      const created = await upsertProvider({
+        id: uniqueId,
+        displayName: agent.displayName,
+        source: 'local',
+        command: agent.command,
+        args: [...agent.args],
+        autoProbe: true,
+      })
+      setAddOpen(false)
+      if (created.status === 'auth_required') {
+        setAuthPanelProviderId(created.id)
+      }
+    } catch (err) {
+      setLocalDetectError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setAddingLocalId(null)
+    }
   }
 
   const openEditProvider = (p: AcpLlmProviderView): void => {
@@ -358,9 +393,10 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
           className={css.input}
           value={draftCommand}
           disabled={formSaving}
-          placeholder="claude-code-acp"
+          placeholder={t('field.commandPlaceholder')}
           onChange={(ev) => { setDraftCommand(ev.target.value) }}
         />
+        <p className={css.hint}>{t('field.commandHint')}</p>
       </div>
 
       <div className={css.field}>
@@ -370,7 +406,7 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
           className={css.input}
           value={draftArgs}
           disabled={formSaving}
-          placeholder={t('field.args')}
+          placeholder={t('field.argsPlaceholder')}
           onChange={(ev) => { setDraftArgs(ev.target.value) }}
         />
       </div>
@@ -502,6 +538,68 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
       </div>
     </div>
   )
+
+  const renderDetectedLocalAgents = (
+    agents: readonly DetectedLocalAcpAgent[],
+    showFillAction: boolean,
+  ): ReactNode => {
+    if (agents.length === 0) return null
+    return (
+      <div className={css.detectedCard}>
+        <span className={css.fieldLabel}>{t('detected.title')}</span>
+        {localDetectError !== null && <p role="alert" className={css.errorText}>{localDetectError}</p>}
+        <div className={css.registryList}>
+          {agents.map((agent) => {
+            const isAdding = addingLocalId === agent.id
+            const cmdPreview = [agent.command, ...agent.args].join(' ')
+            return (
+              <div key={agent.id} className={css.registryItem}>
+                <div className={css.registryMeta}>
+                  <div className={css.registryTitleRow}>
+                    <span className={css.registryName}>{agent.displayName}</span>
+                    {agent.authDetected && (
+                      <span className={clsx(css.badge, css.badgeSuccess)}>
+                        {t('detected.authReady')}
+                      </span>
+                    )}
+                    {agent.alreadyConfigured && (
+                      <span className={css.badge}>{t('registry.added')}</span>
+                    )}
+                  </div>
+                  <p className={css.detectedCode}>{cmdPreview}</p>
+                  {agent.authPath && <p className={css.detectedCode}>{agent.authPath}</p>}
+                </div>
+                <div className={css.registryRight}>
+                  {showFillAction && (
+                    <button
+                      type="button"
+                      className={css.btn}
+                      disabled={addingLocalId !== null}
+                      onClick={() => { openCreateLocal(agent) }}
+                    >
+                      {t('detected.fill')}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={clsx(css.btn, !agent.alreadyConfigured && css.btnPrimary)}
+                    disabled={addingLocalId !== null}
+                    onClick={() => { void handleQuickAddLocal(agent) }}
+                  >
+                    {isAdding
+                      ? t('detected.adding')
+                      : agent.alreadyConfigured
+                        ? t('registry.added')
+                        : t('detected.add')}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <section className={css.wrapper} aria-label={t('section.title')}>
@@ -773,6 +871,8 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
         </ul>
       )}
 
+      {unconfiguredLocalAgents.length > 0 && !addOpen && renderDetectedLocalAgents(unconfiguredLocalAgents, false)}
+
       {addOpen ? (
         <div className={css.card}>
           <SegmentedControl
@@ -895,7 +995,10 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
               </div>
             </>
           ) : (
-            renderProviderForm(false)
+            <>
+              {renderDetectedLocalAgents(detectedLocalAgents, true)}
+              {renderProviderForm(false)}
+            </>
           )}
         </div>
       ) : (

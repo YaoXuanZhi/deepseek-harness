@@ -520,4 +520,97 @@ describe('@deepseek-ai/dsh-llm-acp', () => {
       ctx.registry.delete(LocalSubprocessRuntime)
     }
   }, 35_000)
+
+  it('decodes Windows GBK/CP936 stderr bytes cleanly and preserves valid UTF-8', async () => {
+    const { decodeSubprocessBytes } = await import('../src/probe-auth.ts')
+    // Valid UTF-8 stays intact on every platform.
+    const utf8Bytes = Buffer.from('连接失败：找不到命令', 'utf8')
+    expect(decodeSubprocessBytes(utf8Bytes, 'win32')).toBe('连接失败：找不到命令')
+
+    // Raw GBK/CP936 bytes for `'"agy acp"' 不是内部或外部命令` (as emitted by Chinese Windows cmd.exe).
+    const gbkBytes = Buffer.from([
+      0x27, 0x22, 0x61, 0x67, 0x79, 0x20, 0x61, 0x63, 0x70, 0x22, 0x27, 0x20,
+      0xB2, 0xBB, 0xCA, 0xC7, 0xC4, 0xDA, 0xB2, 0xBF, 0xBB, 0xF2, 0xCD, 0xE2, 0xB2, 0xBF, 0xC3, 0xFC, 0xC1, 0xEE,
+    ])
+    const decoded = decodeSubprocessBytes(gbkBytes, 'win32')
+    expect(decoded).toBe('\'"agy acp"\' 不是内部或外部命令')
+    expect(decoded).not.toContain('\uFFFD')
+  })
+
+  it('splits inline local ACP commands, preserves paths with spaces, and resolves ~/.gemini/bin/agy.exe', async () => {
+    const { normalizeAcpSpawnCommand } = await import('../src/probe-auth.ts')
+    const root = makeTempRoot()
+    const fakeHome = join(root, 'home')
+    const geminiBin = join(fakeHome, '.gemini', 'bin')
+    mkdirSync(geminiBin, { recursive: true })
+    const agyExe = join(geminiBin, 'agy.exe')
+    writeFileSync(agyExe, '', 'utf8')
+
+    // Inline `"agy acp"` splits into command + args AND resolves ~/.gemini/bin/agy.exe even when not on PATH.
+    const normalized = normalizeAcpSpawnCommand('agy acp', [], {
+      homeDir: fakeHome,
+      platform: 'win32',
+      envPath: '',
+    })
+    expect(normalized.command).toBe(agyExe)
+    expect(normalized.args).toEqual(['acp'])
+
+    // Existing executable path with spaces is preserved intact.
+    const spacedDir = join(root, 'My Tools')
+    mkdirSync(spacedDir, { recursive: true })
+    const spacedExe = join(spacedDir, 'my agent.exe')
+    writeFileSync(spacedExe, '', 'utf8')
+    const preserved = normalizeAcpSpawnCommand(spacedExe, ['acp'], {
+      homeDir: fakeHome,
+      platform: 'win32',
+      envPath: '',
+    })
+    expect(preserved.command).toBe(spacedExe)
+    expect(preserved.args).toEqual(['acp'])
+
+    // Quoted path with inline subcommand splits cleanly without eating Windows backslashes.
+    const quoted = normalizeAcpSpawnCommand(`"${spacedExe}" acp --verbose`, [], {
+      homeDir: fakeHome,
+      platform: 'win32',
+      envPath: '',
+    })
+    expect(quoted.command).toBe(spacedExe)
+    expect(quoted.args).toEqual(['acp', '--verbose'])
+  })
+
+  it('auto-discovers local agy binary and ~/.gemini/antigravity-acp authorization', async () => {
+    const { detectLocalAcpAgents } = await import('../src/local-discovery.ts')
+    const root = makeTempRoot()
+    const fakeHome = join(root, 'home')
+    const geminiBin = join(fakeHome, '.gemini', 'bin')
+    const authDir = join(fakeHome, '.gemini', 'antigravity-acp')
+    mkdirSync(geminiBin, { recursive: true })
+    mkdirSync(authDir, { recursive: true })
+    const agyExe = join(geminiBin, 'agy.exe')
+    writeFileSync(agyExe, '', 'utf8')
+    writeFileSync(join(authDir, 'acp_token.json'), '{"token":"ok"}', 'utf8')
+
+    const detected = detectLocalAcpAgents([], {
+      homeDir: fakeHome,
+      platform: 'win32',
+      envPath: '',
+    })
+    expect(detected).toEqual([
+      {
+        id: 'agy-acp',
+        displayName: 'Antigravity ACP',
+        command: agyExe,
+        args: ['acp'],
+        authDetected: true,
+        authPath: authDir,
+        alreadyConfigured: false,
+      },
+    ])
+
+    const afterConfigured = detectLocalAcpAgents(
+      [{ id: 'custom-agy', command: 'agy acp', source: 'local' }],
+      { homeDir: fakeHome, platform: 'win32', envPath: '' },
+    )
+    expect(afterConfigured[0]?.alreadyConfigured).toBe(true)
+  })
 })
