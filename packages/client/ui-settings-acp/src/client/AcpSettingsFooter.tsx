@@ -11,9 +11,11 @@ import type {
   AcpProviderModelEntry,
   AcpRegistryAgentSummary,
   AcpRegistryDistributionKind,
+  AcpTerminalAuthSessionView,
   UpsertAcpProviderInput,
 } from '@deepseek-ai/dsh-llm-acp/client'
 import type {} from './locales.ts'
+import { ProviderAuthTerminal } from './ProviderAuthTerminal.tsx'
 import css from './AcpSettingsFooter.module.css'
 
 /** Client state snapshot held by `ui-settings-acp`. */
@@ -33,6 +35,14 @@ export interface AcpSettingsInjected {
   readonly probeProvider: (providerId: string) => Promise<AcpLlmProviderView>
   readonly startAuth: (providerId: string, methodId?: string) => Promise<AcpAuthFlowView>
   readonly launchTerminalLogin: (providerId: string, commandLine?: string) => Promise<string>
+  readonly startTerminalAuth?: (
+    providerId: string,
+    commandLine?: string,
+    cols?: number,
+    rows?: number,
+  ) => Promise<AcpTerminalAuthSessionView>
+  readonly writeTerminalAuth?: (sessionId: string, data?: string, cols?: number, rows?: number) => Promise<void>
+  readonly stopTerminalAuth?: (sessionId: string) => Promise<void>
 }
 
 /** Composed props delivered to `AcpSettingsFooter` in `settings.models.footer`. */
@@ -77,12 +87,16 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
     probeProvider,
     startAuth,
     launchTerminalLogin,
+    startTerminalAuth,
+    writeTerminalAuth,
+    stopTerminalAuth,
     t,
   } = props
 
   const state = useAcpState(s => s)
   const providers = state.catalog.providers
   const authFlows = state.catalog.authFlows
+  const terminalSessions = state.catalog.terminalSessions ?? []
 
   const modeControlId = useId()
   const [addOpen, setAddOpen] = useState(false)
@@ -283,10 +297,28 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
   const handleOpenTerminal = async (p: AcpLlmProviderView): Promise<void> => {
     setAuthError(null)
     try {
-      const defaultTermCmd = p.authMethods.find(m => m.type === 'terminal')?.terminalCommand
-        ?? `${p.command}${p.args.length > 0 ? ` ${p.args.join(' ')}` : ''}`
-      await launchTerminalLogin(p.id, terminalCmdDraft.trim() || defaultTermCmd)
+      await launchTerminalLogin(p.id, terminalCmdDraft.trim() || undefined)
       setTerminalLaunchedFor(p.id)
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  const handleStartEmbeddedTerminal = async (p: AcpLlmProviderView): Promise<void> => {
+    if (!startTerminalAuth) return
+    setAuthError(null)
+    try {
+      await startTerminalAuth(p.id, terminalCmdDraft.trim() || undefined)
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  const handleStopEmbeddedTerminal = async (sessionId: string): Promise<void> => {
+    if (!stopTerminalAuth) return
+    setAuthError(null)
+    try {
+      await stopTerminalAuth(sessionId)
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : String(err))
     }
@@ -485,6 +517,7 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
             const isAuthOpen = authPanelProviderId === p.id
             const isProbing = probingId === p.id
             const latestFlow = [...authFlows].reverse().find(f => f.providerId === p.id)
+            const activeTerm = [...terminalSessions].reverse().find(s => s.providerId === p.id)
 
             const statusLabel = p.status === 'ready'
               ? t('status.ready', { count: String(p.models.length) })
@@ -637,6 +670,15 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
                           value={terminalCmdDraft}
                           onChange={(ev) => { setTerminalCmdDraft(ev.target.value) }}
                         />
+                        {startTerminalAuth && (
+                          <button
+                            type="button"
+                            className={clsx(css.btn, css.btnPrimary)}
+                            onClick={() => { void handleStartEmbeddedTerminal(p) }}
+                          >
+                            {t('auth.embedTerminalStart')}
+                          </button>
+                        )}
                         <button
                           type="button"
                           className={css.btn}
@@ -653,6 +695,68 @@ export function AcpSettingsFooter(props: AcpSettingsFooterProps): ReactNode {
                           {isProbing ? t('action.probing') : t('auth.doneProbe')}
                         </button>
                       </div>
+                      {activeTerm && (
+                        <div className={css.embeddedTerminalBox}>
+                          <div className={css.embeddedTerminalBar}>
+                            <span className={css.embeddedTerminalStatus}>
+                              <span
+                                className={clsx(
+                                  css.dot,
+                                  activeTerm.status === 'running' && css.dotWarn,
+                                  activeTerm.status === 'exited' && css.dotReady,
+                                  activeTerm.status === 'failed' && css.dotError,
+                                )}
+                              />
+                              <span>
+                                {activeTerm.status === 'running'
+                                  ? t('auth.embedStatusRunning')
+                                  : activeTerm.status === 'exited'
+                                    ? t('auth.embedStatusSucceeded')
+                                    : t('auth.embedStatusFailed', { code: String(activeTerm.exitCode ?? '—') })}
+                              </span>
+                            </span>
+                            <span className={css.embeddedTerminalActions}>
+                              {activeTerm.detectedUrl && (
+                                <a
+                                  href={activeTerm.detectedUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={css.btn}
+                                >
+                                  {t('auth.openUrl')}
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                className={css.btn}
+                                onClick={() => { void handleStartEmbeddedTerminal(p) }}
+                              >
+                                {t('auth.embedRestart')}
+                              </button>
+                              <button
+                                type="button"
+                                className={css.btn}
+                                onClick={() => { void handleStopEmbeddedTerminal(activeTerm.sessionId) }}
+                              >
+                                {t('auth.embedClose')}
+                              </button>
+                            </span>
+                          </div>
+                          <ProviderAuthTerminal
+                            sessionId={activeTerm.sessionId}
+                            output={activeTerm.output}
+                            outputOffset={activeTerm.outputOffset}
+                            status={activeTerm.status}
+                            ariaLabel={t('auth.embedTerminalAria')}
+                            onInput={(data) => {
+                              void writeTerminalAuth?.(activeTerm.sessionId, data).catch(() => {})
+                            }}
+                            onResize={(cols, rows) => {
+                              void writeTerminalAuth?.(activeTerm.sessionId, undefined, cols, rows).catch(() => {})
+                            }}
+                          />
+                        </div>
+                      )}
                       {terminalLaunchedFor === p.id && (
                         <p className={css.successText}>{t('auth.terminalLaunched')}</p>
                       )}

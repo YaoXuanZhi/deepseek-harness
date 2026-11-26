@@ -52,7 +52,7 @@ kind: "package-reference"
 不提供静态 API Key 的订阅制 ACP 服务可通过 `ctx.llmAcp` 及其 Typert Remote 命名空间提供的三种方式完成鉴权：
 
 1. **网页 OAuth 授权（`startAuth`）**——拉起 ACP 子进程并调用 `initialize` 与 `authenticate`，实时捕获标准错误流或消息更新中的授权链接（`status: 'url_required'`），并在授权完成后自动重新探测模型目录。
-2. **拉起本机终端完成订阅登录（`launchTerminalLogin`）**——携带该服务配置的环境变量打开系统原生终端窗口（Windows `cmd`、macOS `Terminal.app` 或 Linux 终端模拟器），以便交互式完成订阅登录并持久化凭据。
+2. **页内嵌入式 Web PTY 与系统终端登录（`startTerminalAuth`、`writeTerminalAuth`、`stopTerminalAuth`、`launchTerminalLogin`）**——通过 `ctx.subprocess.spawnTerminal` 直接在设置页内嵌伪终端完成交互登录（自动提取 `https://` 授权链接并在退出码 `0` 时自动重探测模型），同时也支持按需弹出本机系统终端窗口。
 3. **只写环境变量密钥（`upsertProvider`）**——将敏感环境变量写入 `0o600` 权限的 `secrets.json`，且不会向浏览器快照回传明文密钥。
 
 模型探测（`probeProvider`）在隔离空目录中执行 `initialize` 与 `session/new`，自动提取声明的 `authMethods`、可选模型列表（`configOptions` 类别 `model` 或 `id === 'model'`）、思考档位（`thought_level`）、`mcpCapabilities.http` 与 `promptCapabilities.image`。
@@ -71,8 +71,9 @@ kind: "package-reference"
 |---|---|
 | [`src/index.ts`](src/index.ts) | `AcpLlmService` 持久化存储、`ctx.llm` 路由同步与 `@Remote` RPC 方法 |
 | [`src/adapter.ts`](src/adapter.ts) | `AcpLlmAdapter` 流式实现与历史消息到 ACP 提示块的序列化 |
-| [`src/mcp-tool-bridge.ts`](src/mcp-tool-bridge.ts) | 临时 `127.0.0.1:0` Streamable HTTP MCP 服务端与 `<dsh_tool_call>` XML 降级解析 |
-| [`src/probe-auth.ts`](src/probe-auth.ts) | 子进程生命周期、`initialize` + `session/new` 探测、OAuth 链接捕获与系统终端拉起器 |
+| [`src/mcp-tool-bridge.ts`](src/mcp-tool-bridge.ts) | 临时 `127.0.0.1:0` Streamable HTTP / `McpServerStdio` 桥接与 `<dsh_tool_call>` XML 降级解析 |
+| [`src/probe-auth.ts`](src/probe-auth.ts) | 子进程生命周期、`initialize` + `session/new` 探测、OAuth 链接捕获与交互登录命令推导 |
+| [`src/pty-auth.ts`](src/pty-auth.ts) | `EmbeddedPtyAuthManager` 页内交互式 Web PTY 登录会话、链接识别与零退出码自动探测 |
 | [`src/registry.ts`](src/registry.ts) | ACP Registry 索引缓存及 `binary` / `npx` / `uvx` 沙箱隔离安装 |
 | [`src/types.ts`](src/types.ts) | 品牌化 `AcpLlmProviderId`、Remote 传输结构、错误详情与 Cordis `Events` |
 
@@ -122,7 +123,7 @@ Tool declarations:
 
 - **按请求建立无状态 ACP 会话**——每次 `stream()` 调用都会建立新 ACP 会话并重放由 harness 持有的会话历史，以确保上下文压缩、分支与跨模型切换以 DeepSeek Harness 日志为准；仅保存在外部常驻 ACP 进程内存中的会话状态不会跨轮复用。
 - **用量统计受限于 ACP 协议返回字段**——标准 ACP `session/prompt` 响应仅携带 `stopReason` 而不含 token 计数器，因此 ACP 路由上的上下文压力由 `token-meter` 估算规则驱动。
-- **交互式终端登录依赖本机桌面会话**——`launchTerminalLogin` 会在宿主机器上打开系统终端窗口，在无图形界面或无终端模拟器的纯无头服务器上无法完成交互登录。
+- **弹出外部系统终端依赖本机桌面会话**——内嵌的 `startTerminalAuth` 支持在无头远程服务器上通过浏览器伪终端完成登录，而备选的 `launchTerminalLogin` 外部弹窗按钮仍需宿主具备本地图形界面或终端模拟器。
 
 <a id="dev-note"></a>
 ### 开发备注

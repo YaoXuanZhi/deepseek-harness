@@ -52,7 +52,7 @@ English | [中文](README.zh.md)
 Subscription ACP services that do not issue static API keys can authenticate through three flows exposed on `ctx.llmAcp` and its Typert Remote namespace:
 
 1. **Web OAuth flow (`startAuth`)** — spawns the ACP executable, calls `initialize` and `authenticate`, captures authorization URLs emitted on stderr or message updates (`status: 'url_required'`), and automatically re-probes models upon completion.
-2. **Interactive OS terminal login (`launchTerminalLogin`)** — opens a native terminal window (`cmd` on Windows, `Terminal.app` on macOS, or an X11/Wayland terminal emulator on Linux) with the provider's configured environment variables so CLI-based subscription sign-ins persist in the agent's credential store.
+2. **Embedded Web PTY and OS terminal login (`startTerminalAuth`, `writeTerminalAuth`, `stopTerminalAuth`, `launchTerminalLogin`)** — allocates an interactive pseudo-terminal via `ctx.subprocess.spawnTerminal` directly inside Settings (auto-probing models on exit code `0` and extracting `https://` sign-in URLs), or pops out a native OS terminal window when preferred.
 3. **Write-only environment secrets (`upsertProvider`)** — stores secret environment values in `secrets.json` (`0o600`) without exposing secret material back to browser snapshots.
 
 Probing (`probeProvider`) runs `initialize` followed by `session/new` in an isolated empty directory, extracting advertised `authMethods`, selectable models (`configOptions` category `model` or `id === 'model'`), reasoning effort levels (`thought_level`), `mcpCapabilities.http`, and `promptCapabilities.image`.
@@ -71,8 +71,9 @@ Probing (`probeProvider`) runs `initialize` followed by `session/new` in an isol
 |---|---|
 | [`src/index.ts`](src/index.ts) | `AcpLlmService` persistence, `ctx.llm` route synchronization, and `@Remote` RPC methods |
 | [`src/adapter.ts`](src/adapter.ts) | `AcpLlmAdapter` streaming implementation and history-to-ACP prompt serialization |
-| [`src/mcp-tool-bridge.ts`](src/mcp-tool-bridge.ts) | Ephemeral `127.0.0.1:0` Streamable HTTP MCP server and `<dsh_tool_call>` XML fallback |
-| [`src/probe-auth.ts`](src/probe-auth.ts) | Subprocess lifecycle, `initialize` + `session/new` probing, OAuth URL capture, and OS terminal launcher |
+| [`src/mcp-tool-bridge.ts`](src/mcp-tool-bridge.ts) | Ephemeral `127.0.0.1:0` Streamable HTTP / `McpServerStdio` bridge and `<dsh_tool_call>` XML fallback |
+| [`src/probe-auth.ts`](src/probe-auth.ts) | Subprocess lifecycle, `initialize` + `session/new` probing, OAuth URL capture, and login command derivation |
+| [`src/pty-auth.ts`](src/pty-auth.ts) | `EmbeddedPtyAuthManager` interactive Web PTY login sessions, URL detection, and exit-zero auto-probing |
 | [`src/registry.ts`](src/registry.ts) | ACP Registry index caching and hermetic `binary` / `npx` / `uvx` package preparation |
 | [`src/types.ts`](src/types.ts) | Branded `AcpLlmProviderId`, Remote wire records, error details, and Cordis `Events` |
 
@@ -122,7 +123,7 @@ Each `ctx.llm.stream()` call starts a fresh stateless ACP session with the deter
 
 - **Stateless per-request ACP session** — each `stream()` call opens a fresh ACP session and replays the harness-owned conversation history so DeepSeek Harness compaction, branching, and cross-model switching remain authoritative; session-local memory held only inside a long-lived external ACP process is not reused across turns.
 - **Usage accounting depends on ACP protocol reporting** — standard ACP `session/prompt` responses carry `stopReason` without token usage counters, so token-meter estimates govern context pressure on ACP routes.
-- **Interactive terminal login requires a local desktop session** — `launchTerminalLogin` opens an OS terminal window on the Host machine and cannot be completed on a headless server without a display or terminal emulator.
+- **External OS terminal pop-out requires a local desktop session** — `startTerminalAuth` works on headless remote servers via the browser PTY surface, whereas the secondary `launchTerminalLogin` pop-out button requires a local display or terminal emulator on the Host.
 
 <a id="dev-note"></a>
 ### Dev Note

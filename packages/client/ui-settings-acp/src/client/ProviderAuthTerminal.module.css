@@ -1,0 +1,46 @@
+.embeddedTerminalSurface {
+  height: 228px;
+  padding: 8px 10px;
+  background-color: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+}
+
+.embeddedTerminalSurface :global(.xterm) {
+  height: 100%;
+}
+
+.embeddedTerminalSurface :global(.xterm-viewport) {
+  background-color: var(--dsw-alias-bg-layer-1) !important;
+}
+
+.embeddedTerminalFallback {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background-color: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+}
+
+.embeddedTerminalPre {
+  margin: 0;
+  max-height: 196px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.fallbackInput {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--dsw-radius-sm);
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  background-color: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  outline: none;
+}

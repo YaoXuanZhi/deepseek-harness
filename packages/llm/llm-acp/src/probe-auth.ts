@@ -141,12 +141,41 @@ export function spawnAcpChildProcess(
   }
 }
 
+const ACP_SERVER_SUBCOMMANDS = new Set(['acp', '--acp', '--experimental-acp', 'stdio', '--stdio'])
+
 function shellQuote(token: string): string {
   if (/^[A-Za-z0-9_@%+=:,./\\-]+$/.test(token)) return token
   if (process.platform === 'win32') {
     return `"${token.replaceAll('"', '\\"')}"`
   }
   return `'${token.replaceAll('\'', '\'\\\'\'')}'`
+}
+
+/**
+ * Derive an interactive CLI login command from an ACP spawn target and advertised auth methods,
+ * stripping headless JSON-RPC server flags (`acp`, `--acp`, `stdio`) so an interactive terminal
+ * opens the agent's CLI login flow instead of blocking on stdio JSON-RPC.
+ * @param target - ACP spawn target (`command` and `args`).
+ * @param authMethods - Advertised ACP authentication methods from `initialize`.
+ * @returns Shell-quoted interactive login command line.
+ */
+export function deriveDefaultTerminalLoginCommand(
+  target: Pick<AcpSpawnTarget, 'command' | 'args'>,
+  authMethods: readonly AcpAdvertisedAuthMethod[] = [],
+): string {
+  const explicitTerm = authMethods.find(m => m.type === 'terminal' && m.terminalCommand?.trim())
+  if (explicitTerm?.terminalCommand) {
+    return explicitTerm.terminalCommand.trim()
+  }
+  const interactiveArgs = target.args.filter(arg => !ACP_SERVER_SUBCOMMANDS.has(arg.toLowerCase()))
+  const hintsLoginSubcommand = authMethods.some((m) => {
+    const haystack = `${m.id} ${m.description ?? ''}`.toLowerCase()
+    return haystack.includes('_login') || /\blogin\b/.test(haystack)
+  })
+  const finalArgs = hintsLoginSubcommand && !interactiveArgs.some(a => a.toLowerCase() === 'login')
+    ? [...interactiveArgs, 'login']
+    : interactiveArgs
+  return [target.command, ...finalArgs].map(shellQuote).join(' ')
 }
 
 function normalizeAuthMethods(
@@ -171,7 +200,8 @@ function normalizeAuthMethods(
       const extraArgs = Array.isArray(item.args)
         ? item.args.filter((a): a is string => typeof a === 'string')
         : []
-      terminalCommand = [target.command, ...target.args, ...extraArgs].map(shellQuote).join(' ')
+      const baseArgs = target.args.filter(arg => !ACP_SERVER_SUBCOMMANDS.has(arg.toLowerCase()))
+      terminalCommand = [target.command, ...baseArgs, ...extraArgs].map(shellQuote).join(' ')
     }
 
     let envVarNames: string[] | undefined
@@ -553,7 +583,7 @@ export function launchTerminalSubscriptionLogin(
 ): { readonly commandLine: string } {
   mkdirSync(target.cwd, { recursive: true })
   const cmdLine = loginCommandLine?.trim()
-    || [target.command, ...target.args].map(shellQuote).join(' ')
+    || deriveDefaultTerminalLoginCommand(target)
   const mergedEnv: NodeJS.ProcessEnv = {
     ...process.env,
     ...target.env,

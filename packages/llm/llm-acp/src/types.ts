@@ -200,6 +200,30 @@ export interface AcpAuthFlowView {
   readonly startedAt: string
 }
 
+/** Live or recently completed embedded Web PTY terminal sign-in session. */
+export interface AcpTerminalAuthSessionView {
+  /** Ephemeral PTY session identifier. */
+  readonly sessionId: string
+  /** Target ACP provider route id. */
+  readonly providerId: AcpLlmProviderId
+  /** Shell command line executed inside the embedded PTY. */
+  readonly commandLine: string
+  /** Lifecycle status of the PTY process. */
+  readonly status: 'running' | 'exited' | 'failed'
+  /** Process exit code once `status` leaves `'running'`. */
+  readonly exitCode?: number
+  /** Bounded UTF-8 terminal output tail (`<= 65_536` characters). */
+  readonly output: string
+  /** Monotonic cumulative UTF-8 character offset for incremental `xterm.write` deltas. */
+  readonly outputOffset: number
+  /** Latest `https://` authorization URL detected inside the PTY output stream, if any. */
+  readonly detectedUrl?: string
+  /** Optional error message when PTY allocation or execution fails. */
+  readonly errorMessage?: string
+  /** ISO timestamp when this PTY session started. */
+  readonly startedAt: string
+}
+
 /** Complete catalog snapshot returned by `ctx.remote.llmAcp.catalog()`. */
 export interface AcpLlmCatalog {
   /** Monotonic state revision counter. */
@@ -208,6 +232,8 @@ export interface AcpLlmCatalog {
   readonly providers: readonly AcpLlmProviderView[]
   /** Active or recent OAuth/agent auth flows. */
   readonly authFlows: readonly AcpAuthFlowView[]
+  /** Active or recent embedded PTY sign-in terminal sessions. */
+  readonly terminalSessions?: readonly AcpTerminalAuthSessionView[]
 }
 
 /** Input payload for creating or updating an ACP LLM provider. */

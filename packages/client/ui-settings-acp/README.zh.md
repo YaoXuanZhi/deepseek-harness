@@ -29,7 +29,7 @@ kind: "package-reference"
 
 - **ACP Registry 在线搜索**——调用 `ctx.remote.llmAcp.searchRegistry` 检索目录，在存在多种分发方式（`npx`、`binary`、`uvx`）时允许按需选择，将分发包隔离下载准备到 `$DSH_HOME/acp-registry` 内，并自动探测可用模型与登录方式。
 - **本地 ACP 命令**——配置自定义 Provider ID、显示名称、可执行命令、启动参数、普通或只写加密环境变量，以及可选的手动模型列表。
-- **授权登录与探测模型**——在任意已保存的 ACP 服务行展开授权面板，一键发起网页 OAuth 授权（`startAuth`）、拉起本机终端窗口登录（`launchTerminalLogin`）或重新探测模型（`probeProvider`）。
+- **授权登录与探测模型**——在任意已保存的 ACP 服务行展开授权面板，一键发起网页 OAuth 授权（`startAuth`）、直接在页内嵌入式 `@xterm/xterm` 伪终端完成交互登录（`startTerminalAuth`）、弹出外部系统终端窗口（`launchTerminalLogin`）或重新探测模型（`probeProvider`）。
 
 -----
 
@@ -47,6 +47,8 @@ kind: "package-reference"
 | [`src/client/index.ts`](src/client/index.ts) | 客户端插槽注入、Remote 目录订阅与多语言词典注册 |
 | [`src/client/AcpSettingsFooter.tsx`](src/client/AcpSettingsFooter.tsx) | 服务行卡片、授权登录面板、Registry 搜索安装页签、本地命令编辑器与删除确认弹窗 |
 | [`src/client/AcpSettingsFooter.module.css`](src/client/AcpSettingsFooter.module.css) | 与 `ui-settings-models` 视觉规范对齐的主题变量样式 |
+| [`src/client/ProviderAuthTerminal.tsx`](src/client/ProviderAuthTerminal.tsx) | 按需懒加载的 `@xterm/xterm` 内嵌登录终端，支持亮暗主题自动同步与 `https://` 链接点击打开 |
+| [`src/client/ProviderAuthTerminal.module.css`](src/client/ProviderAuthTerminal.module.css) | 懒加载内嵌终端分包独立的样式表 |
 | [`src/client/locales.ts`](src/client/locales.ts) | 内置八语种界面文案词典 |
 
 </details>

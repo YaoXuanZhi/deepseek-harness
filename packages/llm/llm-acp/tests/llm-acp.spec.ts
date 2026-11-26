@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import LlmPlugin, { type StreamChunk } from '@deepseek-ai/dsh-llm'
+import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import { afterEach, describe, expect, it } from 'vitest'
 import * as fflate from 'fflate'
 import AcpLlmService from '../src/index.ts'
@@ -22,12 +23,30 @@ const ACP_SDK_URL = pathToFileURL(createRequire(import.meta.url).resolve('@agent
  */
 const MOCK_ACP_AGENT_SOURCE = `
 import { existsSync, writeFileSync } from 'node:fs'
+import { createInterface } from 'node:readline'
 import { Readable, Writable } from 'node:stream'
 import { agent as createAcpAgent, methods, ndJsonStream, PROTOCOL_VERSION, RequestError } from ${JSON.stringify(ACP_SDK_URL)}
 
 const authMarker = process.env.MOCK_AUTH_FILE || ''
 const requireAuth = process.env.MOCK_REQUIRE_AUTH === '1'
 const disableHttpMcp = process.env.MOCK_DISABLE_HTTP_MCP === '1'
+
+if (process.argv.includes('login')) {
+  process.stdout.write('\\x1b[36mVisit https://auth.example.test/pty-login?code=PTY999\\x1b[0m\\nVerification code: ')
+  const rl = createInterface({ input: process.stdin })
+  rl.on('line', (line) => {
+    if (line.trim() === 'PTY999') {
+      if (authMarker) writeFileSync(authMarker, 'pty-ok', 'utf8')
+      process.stdout.write('Signed in via embedded PTY!\\n')
+      rl.close()
+      process.exit(0)
+    } else {
+      process.stdout.write('Invalid code\\n')
+      rl.close()
+      process.exit(1)
+    }
+  })
+} else {
 
 let selectedModel = 'claude-sonnet-4-5'
 let selectedThought = 'medium'
@@ -169,6 +188,7 @@ createAcpAgent({ name: 'mock-sub-acp', version: '1.2.0' })
   })
   .onNotification(methods.agent.session.cancel, async () => {})
   .connect(ndJsonStream(Writable.toWeb(process.stdout), Readable.toWeb(process.stdin)))
+}
 `
 
 describe('@deepseek-ai/dsh-llm-acp', () => {
@@ -385,4 +405,119 @@ describe('@deepseek-ai/dsh-llm-acp', () => {
     expect(parsed.toolCalls[0]?.name).toBe('Canvas')
     expect(JSON.parse(parsed.toolCalls[0]?.argumentsJson ?? '{}')).toEqual({ title: 'Ops Board' })
   })
+
+  it('derives interactive terminal login commands by stripping acp stdio flags', async () => {
+    const { deriveDefaultTerminalLoginCommand } = await import('../src/probe-auth.ts')
+
+    expect(deriveDefaultTerminalLoginCommand(
+      { command: 'cursor-agent.cmd', args: ['acp'] },
+      [{
+        id: 'cursor_login',
+        name: 'Cursor Login',
+        description: "Run 'agent login' first if not logged in.",
+        type: 'agent',
+      }],
+    )).toBe('cursor-agent.cmd login')
+
+    expect(deriveDefaultTerminalLoginCommand(
+      { command: 'agy.exe', args: ['acp'] },
+      [{
+        id: 'oauth-personal',
+        name: 'Log in with Google',
+        type: 'agent',
+      }],
+    )).toBe('agy.exe')
+
+    expect(deriveDefaultTerminalLoginCommand(
+      { command: 'claude-acp', args: ['--acp'] },
+      [{
+        id: 'term-login',
+        name: 'Terminal Login',
+        type: 'terminal',
+        terminalCommand: 'claude login',
+      }],
+    )).toBe('claude login')
+  })
+
+  it('completes interactive CLI sign-in inside an embedded PTY and auto-probes models on exit 0', async () => {
+    const root = makeTempRoot()
+    const agentScriptPath = join(root, 'mock-acp-agent.mjs')
+    writeFileSync(agentScriptPath, MOCK_ACP_AGENT_SOURCE, 'utf8')
+    const authFile = join(root, 'pty-auth-granted.flag')
+
+    const ctx = new Context()
+    await ctx.plugin(LocalSubprocessRuntime)
+    await ctx.plugin(LlmPlugin)
+    await ctx.plugin(AcpLlmService, {
+      registryRoot: join(root, 'acp-registry'),
+      probeTimeoutMs: 15_000,
+    })
+
+    try {
+      const saved = await ctx.llmAcp.upsertProvider({
+        id: 'pty-claude',
+        displayName: 'PTY Subscription ACP',
+        source: 'local',
+        command: process.execPath,
+        args: [agentScriptPath, 'acp'],
+        env: [
+          { name: 'MOCK_REQUIRE_AUTH', value: '1', secret: false },
+          { name: 'MOCK_AUTH_FILE', value: authFile, secret: false },
+        ],
+        autoProbe: true,
+      })
+      expect(saved.status).toBe('auth_required')
+
+      const ptySession = await ctx.llmAcp.startTerminalAuth({
+        providerId: saved.id,
+        cols: 90,
+        rows: 20,
+      })
+      expect(ptySession.status).toBe('running')
+      expect(ptySession.commandLine).toContain('login')
+      expect(ptySession.commandLine).not.toContain(' acp ')
+
+      // Wait until the PTY outputs the verification URL and prompt
+      let liveSession = ptySession
+      for (let i = 0; i < 60; i += 1) {
+        const cat = await ctx.llmAcp.catalog()
+        const found = cat.terminalSessions?.find(s => s.sessionId === ptySession.sessionId)
+        if (found) liveSession = found
+        if (liveSession.detectedUrl?.includes('https://auth.example.test/pty-login?code=PTY999')) {
+          break
+        }
+        await new Promise(r => setTimeout(r, 100))
+      }
+      expect(liveSession.detectedUrl).toBe('https://auth.example.test/pty-login?code=PTY999')
+      expect(liveSession.outputOffset).toBeGreaterThan(0)
+
+      // Type the verification code into the live embedded PTY!
+      await ctx.llmAcp.writeTerminalAuth({
+        sessionId: ptySession.sessionId,
+        data: 'PTY999\r',
+        cols: 100,
+        rows: 24,
+      })
+
+      // Wait for clean exit (0) and automatic model discovery probe!
+      let readyModels: readonly string[] = []
+      for (let i = 0; i < 80; i += 1) {
+        const cat = await ctx.llmAcp.catalog()
+        const prov = cat.providers.find(p => p.id === saved.id)
+        const term = cat.terminalSessions?.find(s => s.sessionId === ptySession.sessionId)
+        if (prov?.status === 'ready' && prov.models.length >= 2 && term?.status === 'exited') {
+          readyModels = prov.models.map(m => m.id)
+          break
+        }
+        await new Promise(r => setTimeout(r, 100))
+      }
+      expect(readyModels).toEqual(['claude-sonnet-4-5', 'gpt-5-codex'])
+
+      const stopRes = await ctx.llmAcp.stopTerminalAuth({ sessionId: ptySession.sessionId })
+      expect(stopRes.stopped).toBe(true)
+    } finally {
+      ctx.registry.delete(AcpLlmService)
+      ctx.registry.delete(LocalSubprocessRuntime)
+    }
+  }, 35_000)
 })

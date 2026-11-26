@@ -21,13 +21,16 @@ import type { AdapterRegistrationHandle } from '@deepseek-ai/dsh-llm'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-credentials'
+import type {} from '@deepseek-ai/dsh-subprocess'
 import { AcpLlmAdapter, type ResolvedAcpProviderRuntime } from './adapter.ts'
 import {
+  deriveDefaultTerminalLoginCommand,
   launchTerminalSubscriptionLogin,
   probeAcpAgent,
   runAcpAuthenticateFlow,
   type AcpSpawnTarget,
 } from './probe-auth.ts'
+import { EmbeddedPtyAuthManager } from './pty-auth.ts'
 import { AcpRegistryManager, DEFAULT_ACP_REGISTRY_URL } from './registry.ts'
 import type {
   AcpAdvertisedAuthMethod,
@@ -42,6 +45,7 @@ import type {
   AcpRegistryDistributionKind,
   AcpRegistryPrepareResult,
   AcpRegistrySearchResult,
+  AcpTerminalAuthSessionView,
   UpsertAcpProviderInput,
 } from './types.ts'
 
@@ -183,6 +187,7 @@ export class AcpLlmService extends TypertRemoteService {
   private readonly providers = new Map<AcpLlmProviderId, PersistedAcpProviderRecord>()
   private secrets: Record<string, Record<string, string>> = {}
   private readonly authFlows = new Map<string, AcpAuthFlowView>()
+  private readonly ptyAuthManager: EmbeddedPtyAuthManager
   private adapterHandle: AdapterRegistrationHandle | undefined
   private revision = 1
 
@@ -198,6 +203,16 @@ export class AcpLlmService extends TypertRemoteService {
       this.rootDir,
       config.registryUrl ?? DEFAULT_ACP_REGISTRY_URL,
       config.installTimeoutMs ?? 600_000,
+    )
+    this.ptyAuthManager = new EmbeddedPtyAuthManager(
+      () => this.ctx.get('subprocess'),
+      () => {
+        this.revision += 1
+        this.ctx.emit('llm-acp/changed', this.revision)
+      },
+      async (providerId) => {
+        await this.probeProvider(providerId).catch(() => {})
+      },
     )
     this.loadFromDiskSync()
     this.mergeDeclarativeConfig(config.providers ?? {})
@@ -223,9 +238,10 @@ export class AcpLlmService extends TypertRemoteService {
     if (initialRoutes.length > 0) {
       this.adapterHandle = this.ctx.llm.registerAdapter(initialRoutes, adapter)
     }
-    this.ctx.effect(() => () => {
+    this.ctx.effect(() => async () => {
       this.adapterHandle?.()
       this.adapterHandle = undefined
+      await this.ptyAuthManager.disposeAll()
     })
 
     // Re-bind adapter lazily whenever first route is added after empty startup
@@ -419,6 +435,7 @@ export class AcpLlmService extends TypertRemoteService {
       revision: this.revision,
       providers: [...this.providers.values()].map(p => this.toProviderView(p)),
       authFlows: [...this.authFlows.values()],
+      terminalSessions: this.ptyAuthManager.listViews(),
     })
   }
 
@@ -589,6 +606,7 @@ export class AcpLlmService extends TypertRemoteService {
     const id = brandString<AcpLlmProviderId>(providerId.trim())
     const existed = this.providers.delete(id)
     this.secrets = Object.fromEntries(Object.entries(this.secrets).filter(([k]) => k !== id))
+    await this.ptyAuthManager.stopForProvider(id)
     if (existed) {
       await this.persistAndNotify()
     }
@@ -730,9 +748,82 @@ export class AcpLlmService extends TypertRemoteService {
       throw new RemoteError('llm-acp/not-found', `ACP provider "${request.providerId}" not found`, {})
     }
     const target = this.buildSpawnTarget(record)
-    const termMethod = record.authMethods.find(m => m.type === 'terminal')
-    const cmdToRun = request.commandLine?.trim() || termMethod?.terminalCommand
+    const cmdToRun = request.commandLine?.trim()
+      || deriveDefaultTerminalLoginCommand(target, record.authMethods)
     return Promise.resolve(launchTerminalSubscriptionLogin(target, cmdToRun))
+  }
+
+  /**
+   * Start an embedded interactive Web PTY sign-in terminal session inside Settings.
+   * Automatically probes models when the login command exits with code `0`.
+   * @param request - Target `providerId`, optional `commandLine`, and initial `cols`/`rows`.
+   * @returns Started PTY session view.
+   */
+  @Remote('startTerminalAuth')
+  async startTerminalAuth(request: {
+    readonly providerId: string
+    readonly commandLine?: string
+    readonly cols?: number
+    readonly rows?: number
+  }): Promise<AcpTerminalAuthSessionView> {
+    const id = brandString<AcpLlmProviderId>(request.providerId.trim())
+    const record = this.providers.get(id)
+    if (!record) {
+      throw new RemoteError('llm-acp/not-found', `ACP provider "${request.providerId}" not found`, {})
+    }
+    const target = this.buildSpawnTarget(record)
+    const cmdToRun = request.commandLine?.trim()
+      || deriveDefaultTerminalLoginCommand(target, record.authMethods)
+    try {
+      return await this.ptyAuthManager.startSession({
+        providerId: id,
+        target,
+        commandLine: cmdToRun,
+        ...(request.cols === undefined ? {} : { cols: request.cols }),
+        ...(request.rows === undefined ? {} : { rows: request.rows }),
+      })
+    } catch (err) {
+      throw new RemoteError(
+        'llm-acp/operation-failed',
+        err instanceof Error ? err.message : String(err),
+        {},
+      )
+    }
+  }
+
+  /**
+   * Send user keystrokes, pasted text, or terminal resize dimensions to a running embedded PTY session.
+   * @param request - Target `sessionId`, optional `data`, and optional `cols`/`rows`.
+   * @returns Acknowledgement object.
+   */
+  @Remote('writeTerminalAuth')
+  async writeTerminalAuth(request: {
+    readonly sessionId: string
+    readonly data?: string
+    readonly cols?: number
+    readonly rows?: number
+  }): Promise<{ readonly ok: boolean }> {
+    try {
+      await this.ptyAuthManager.writeSession(request)
+      return { ok: true }
+    } catch (err) {
+      throw new RemoteError(
+        'llm-acp/operation-failed',
+        err instanceof Error ? err.message : String(err),
+        {},
+      )
+    }
+  }
+
+  /**
+   * Terminate and close an embedded PTY sign-in terminal session.
+   * @param request - Target `sessionId` to close.
+   * @returns Whether an active or retained session was closed.
+   */
+  @Remote('stopTerminalAuth')
+  async stopTerminalAuth(request: { readonly sessionId: string }): Promise<{ readonly stopped: boolean }> {
+    const stopped = await this.ptyAuthManager.stopSession(request.sessionId.trim())
+    return { stopped }
   }
 }
 

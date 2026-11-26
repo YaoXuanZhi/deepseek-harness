@@ -21,13 +21,31 @@ export interface CapturedAcpToolCall {
 
 /** Running loopback HTTP MCP server handle scoped to one LLM stream call. */
 export interface LoopbackMcpBridgeHandle {
-  /** Loopback HTTP URL passed to ACP `session/new` `mcpServers`. */
+  /** Loopback HTTP URL passed to ACP `session/new` `mcpServers` (`type: 'http'`). */
   readonly url: string
+  /** Standard ACP `McpServerStdio` descriptor proxying newline JSON-RPC over stdio to `url`. */
+  readonly stdioServer: {
+    readonly name: string
+    readonly command: string
+    readonly args: readonly string[]
+  }
   /** Read all tool calls captured so far in invocation order. */
   readonly getCapturedCalls: () => readonly CapturedAcpToolCall[]
   /** Shut down the loopback HTTP listener. */
   readonly close: () => Promise<void>
 }
+
+const STDIO_MCP_PROXY_SCRIPT = [
+  'const rl = require("node:readline").createInterface({ input: process.stdin, crlfDelay: Infinity });',
+  'const url = process.argv[1];',
+  'rl.on("line", async (line) => {',
+  '  const trimmed = line.trim(); if (!trimmed) return;',
+  '  try {',
+  '    const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: trimmed });',
+  '    if (res.status === 200) { const txt = await res.text(); if (txt.trim()) process.stdout.write(txt.trim() + "\\n"); }',
+  '  } catch {}',
+  '});',
+].join(' ')
 
 interface JsonRpcRequest {
   readonly jsonrpc?: string
@@ -258,8 +276,14 @@ export async function startLoopbackMcpToolBridge(
   const address = server.address()
   const port = typeof address === 'object' && address !== null ? address.port : 0
 
+  const bridgeUrl = `http://127.0.0.1:${String(port)}${routePath}`
   return {
-    url: `http://127.0.0.1:${String(port)}${routePath}`,
+    url: bridgeUrl,
+    stdioServer: {
+      name: 'dsh_tools',
+      command: process.execPath,
+      args: ['-e', STDIO_MCP_PROXY_SCRIPT, bridgeUrl],
+    },
     getCapturedCalls: () => [...captured],
     close: () => new Promise<void>((resolveClose) => {
       if (settleTimer !== undefined) {

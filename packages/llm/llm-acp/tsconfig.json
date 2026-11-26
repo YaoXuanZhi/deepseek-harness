@@ -39,6 +39,9 @@
       "path": "../../llm/llm"
     },
     {
+      "path": "../../subprocess/subprocess"
+    },
+    {
       "path": "../../typert/protocol"
     }
   ]

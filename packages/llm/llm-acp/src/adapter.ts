@@ -119,6 +119,10 @@ export async function buildAcpPromptBlocks(
   }
   if (includeFallbackTools && options.tools && options.tools.length > 0) {
     sections.push(formatFallbackToolDeclarations(options.tools))
+  } else if (options.tools && options.tools.length > 0) {
+    sections.push(
+      '[Tool Routing: Invoke ONLY tools from the "dsh_tools" MCP server (`dsh_tools/*`); do not invoke built-in local filesystem or shell tools.]',
+    )
   }
 
   const imageBlocks: AcpContentBlock[] = []
@@ -259,7 +263,7 @@ export class AcpLlmAdapter extends LlmAdapter {
     let textIndex: number | undefined
     let visibleText = ''
     let nextBlockIndex = 0
-    let usedHttpMcp = false
+    let usedMcpBridge = false
     let capturedMcpInterrupted = false
 
     const ensureClosedOpenBlocks = (): void => {
@@ -302,7 +306,7 @@ export class AcpLlmAdapter extends LlmAdapter {
             })
             reasoningIndex = undefined
           }
-          if (usedHttpMcp || activeTools.length === 0) {
+          if (usedMcpBridge || activeTools.length === 0) {
             if (textIndex === undefined) {
               textIndex = nextBlockIndex
               nextBlockIndex += 1
@@ -318,9 +322,9 @@ export class AcpLlmAdapter extends LlmAdapter {
         return Promise.resolve()
       })
       .onRequest(methods.client.session.requestPermission, ({ params }) => {
-        // Allow ONLY our loopback MCP tool server (`dsh_tools`); deny built-in agent fs/shell tools.
+        // Allow ONLY our loopback MCP tool server (`dsh_tools`); reject built-in agent fs/shell tools without cancelling the turn.
         const rawTitle = `${params.toolCall.title ?? ''} ${params.toolCall.toolCallId}`.toLowerCase()
-        const isDshMcpTool = usedHttpMcp && (
+        const isDshMcpTool = mcpBridge !== undefined && (
           rawTitle.includes('dsh_tools')
           || Array.from(validToolNames).some(n => rawTitle.includes(n.toLowerCase()))
         )
@@ -329,6 +333,10 @@ export class AcpLlmAdapter extends LlmAdapter {
           if (allowOpt) {
             return Promise.resolve({ outcome: { outcome: 'selected', optionId: allowOpt.optionId } })
           }
+        }
+        const rejectOpt = params.options.find(o => o.kind === 'reject_once' || o.kind === 'reject_always')
+        if (rejectOpt) {
+          return Promise.resolve({ outcome: { outcome: 'selected', optionId: rejectOpt.optionId } })
         }
         return Promise.resolve({ outcome: { outcome: 'cancelled' } })
       })
@@ -367,10 +375,17 @@ export class AcpLlmAdapter extends LlmAdapter {
         const agentSupportsHttpMcp = mcpCaps.http === true
         const agentSupportsImages = isRecord(caps.promptCapabilities) && caps.promptCapabilities.image === true
 
-        usedHttpMcp = agentSupportsHttpMcp && mcpBridge !== undefined
-        const mcpServers: McpServer[] = usedHttpMcp && mcpBridge !== undefined
-          ? [{ type: 'http', name: 'dsh_tools', url: mcpBridge.url, headers: [] }]
-          : []
+        usedMcpBridge = mcpBridge !== undefined
+        const mcpServers: McpServer[] = mcpBridge === undefined
+          ? []
+          : agentSupportsHttpMcp
+            ? [{ type: 'http', name: 'dsh_tools', url: mcpBridge.url, headers: [] }]
+            : [{
+              name: mcpBridge.stdioServer.name,
+              command: mcpBridge.stdioServer.command,
+              args: [...mcpBridge.stdioServer.args],
+              env: [],
+            }]
 
         const sessionRes: unknown = await agent.request(methods.agent.session.new, {
           cwd: rt.spawnTarget.cwd,
@@ -403,7 +418,7 @@ export class AcpLlmAdapter extends LlmAdapter {
 
         const promptBlocks = await buildAcpPromptBlocks(
           options,
-          !usedHttpMcp && activeTools.length > 0,
+          !usedMcpBridge && activeTools.length > 0,
           agentSupportsImages ? this.readImageBytes : undefined,
         )
 
@@ -418,7 +433,7 @@ export class AcpLlmAdapter extends LlmAdapter {
 
         // Assemble final text & any captured tool calls
         let finalToolCalls: readonly CapturedAcpToolCall[] = mcpBridge?.getCapturedCalls() ?? []
-        if (!usedHttpMcp && activeTools.length > 0 && finalToolCalls.length === 0) {
+        if (!usedMcpBridge && activeTools.length > 0 && finalToolCalls.length === 0) {
           const parsed = extractFallbackToolCalls(visibleText, validToolNames)
           finalToolCalls = parsed.toolCalls
           if (parsed.visibleText) {

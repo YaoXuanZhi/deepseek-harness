@@ -29,7 +29,7 @@ English | [中文](README.zh.md)
 
 - **ACP Registry online search** — searches `ctx.remote.llmAcp.searchRegistry`, lets the user pick a supported distribution (`npx`, `binary`, or `uvx`) when multiple exist, downloads and prepares the package inside `$DSH_HOME/acp-registry`, and probes advertised models and auth methods.
 - **Local ACP command** — configures a custom Provider ID, display name, executable command, arguments, plaintext or write-only secret environment variables, and optional manual model IDs.
-- **Authorize & Probe** — opens the inline authentication panel for any saved ACP provider to start a web OAuth flow (`startAuth`), open an interactive host terminal window (`launchTerminalLogin`), or re-probe models (`probeProvider`).
+- **Authorize & Probe** — opens the inline authentication panel for any saved ACP provider to start a web OAuth flow (`startAuth`), sign in directly inside an embedded `@xterm/xterm` PTY terminal (`startTerminalAuth`), pop out an external OS terminal (`launchTerminalLogin`), or re-probe models (`probeProvider`).
 
 -----
 
@@ -47,6 +47,8 @@ The client entry registers the `settingsAcp` locale namespace across all eight s
 | [`src/client/index.ts`](src/client/index.ts) | Client slot injection, Remote catalog subscription, and locale registration |
 | [`src/client/AcpSettingsFooter.tsx`](src/client/AcpSettingsFooter.tsx) | Provider cards, auth panel, Registry search/install tab, local command editor, and delete confirmation modal |
 | [`src/client/AcpSettingsFooter.module.css`](src/client/AcpSettingsFooter.module.css) | Theme-token styles matching `ui-settings-models` |
+| [`src/client/ProviderAuthTerminal.tsx`](src/client/ProviderAuthTerminal.tsx) | Lazy-loaded `@xterm/xterm` interactive sign-in terminal with theme sync and clickable `https://` links |
+| [`src/client/ProviderAuthTerminal.module.css`](src/client/ProviderAuthTerminal.module.css) | Isolated styles for the lazy-loaded embedded terminal surface |
 | [`src/client/locales.ts`](src/client/locales.ts) | Shipped eight-language UI copy dictionaries |
 
 </details>

@@ -110,6 +110,31 @@ export function apply(ctx: ClientContext): void {
       if (!res.ok) throw new Error(res.error.message)
       return res.value.commandLine
     },
+    startTerminalAuth: async (providerId, commandLine, cols, rows) => {
+      const res = await ctx.remote.llmAcp.startTerminalAuth({
+        providerId,
+        ...(commandLine === undefined ? {} : { commandLine }),
+        ...(cols === undefined ? {} : { cols }),
+        ...(rows === undefined ? {} : { rows }),
+      })
+      if (!res.ok) throw new Error(res.error.message)
+      await refresh()
+      return res.value
+    },
+    writeTerminalAuth: async (sessionId, data, cols, rows) => {
+      const res = await ctx.remote.llmAcp.writeTerminalAuth({
+        sessionId,
+        ...(data === undefined ? {} : { data }),
+        ...(cols === undefined ? {} : { cols }),
+        ...(rows === undefined ? {} : { rows }),
+      })
+      if (!res.ok) throw new Error(res.error.message)
+    },
+    stopTerminalAuth: async (sessionId) => {
+      const res = await ctx.remote.llmAcp.stopTerminalAuth({ sessionId })
+      if (!res.ok) throw new Error(res.error.message)
+      await refresh()
+    },
   })
 
   ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
