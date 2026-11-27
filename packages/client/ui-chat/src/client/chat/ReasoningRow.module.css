@@ -71,7 +71,10 @@
 }
 
 .thinkBody {
-  /* Indent under the title, which starts at leading (16 + delta) + gap 6. */
+  /* Indent under the title and match Kimi Work's 340px scrollable think-body cap. */
   padding: 4px 0 4px calc(22px + var(--dsh-content-font-delta, 0px));
   min-width: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
 }

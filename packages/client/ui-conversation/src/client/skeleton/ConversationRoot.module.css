@@ -1,5 +1,6 @@
 .root {
-  position: relative; /* positioning context for slot-owned absolute chrome */
+  position: relative;
+  /* positioning context for slot-owned absolute chrome */
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -14,21 +15,22 @@
   isolation: isolate;
 }
 
-/* Single-row borderless header aligned with Kimi Work's serene canvas chrome. */
+/* Single-row borderless header aligned with Kimi Work's 52px conv-header. */
 .header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   flex: none;
   box-sizing: border-box;
-  min-height: 48px;
-  padding: 8px 20px;
+  min-height: 52px;
+  padding: 0 10px 0 14px;
+  background: var(--dsw-alias-bg-base);
   border-bottom: none;
 }
 
 .header:where(:not(:has(.tabs))) {
-  min-height: 48px;
-  padding-bottom: 8px;
+  min-height: 52px;
+  padding-bottom: 0;
 }
 
 /* Blank Sessions retain navigation controls without conversation title or tabs.
@@ -131,23 +133,24 @@
 }
 
 .crumbSep {
-  /* figma: "/" separators are 14px caption gray (75:7903), one tint lighter than crumb text. */
-  color: var(--dsw-alias-label-caption);
-  font-size: 14px;
-  line-height: 20px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
 }
 
 .crumb {
   display: inline-block;
-  max-width: 220px;
+  max-width: 360px;
   overflow: hidden;
-  padding: 4px 8px;
+  padding: 6px;
   border: none;
-  border-radius: var(--dsw-radius-md);
+  border-radius: var(--dsw-radius-sm);
   background: transparent;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--dsw-alias-label-tertiary);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  color: var(--dsw-alias-label-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
@@ -161,19 +164,19 @@
 
 .crumbWorkspace {
   display: inline-block;
-  max-width: 180px;
+  max-width: 200px;
   overflow: hidden;
-  padding: 4px 2px 4px 0;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 14px;
-  line-height: 20px;
+  padding: 6px 2px 6px 6px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 16px;
+  line-height: 24px;
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .crumbCurrent {
-  font-weight: 500;
+  font-weight: 400;
   color: var(--dsw-alias-label-primary);
   cursor: default;
 }
@@ -205,9 +208,10 @@
 
 .headerMenuButton {
   flex: none;
-  width: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--dsw-alias-label-primary);
 }
 
 .headerMenuButton svg {
@@ -291,9 +295,17 @@
   color: var(--dsw-alias-label-secondary);
 }
 
-.viewsMoreActive { color: var(--dsw-alias-state-business-primary); }
+.viewsMoreActive {
+  color: var(--dsw-alias-state-business-primary);
+}
 
-.tabLabel { display: block; max-width: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabLabel {
+  display: block;
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .viewsMore[aria-expanded='true'] {
   background: var(--dsw-alias-interactive-bg-hover);
@@ -363,13 +375,11 @@
   bottom: 0;
   width: 2px;
   border-radius: 2px;
-  background: linear-gradient(
-    to bottom,
-    transparent calc(var(--dsh-width-handle-pointer-y, 50%) - 36px),
-    var(--dsw-alias-scrollbar-bg-l1) calc(var(--dsh-width-handle-pointer-y, 50%) - 8px),
-    var(--dsw-alias-scrollbar-bg-l1) calc(var(--dsh-width-handle-pointer-y, 50%) + 8px),
-    transparent calc(var(--dsh-width-handle-pointer-y, 50%) + 36px)
-  );
+  background: linear-gradient(to bottom,
+      transparent calc(var(--dsh-width-handle-pointer-y, 50%) - 36px),
+      var(--dsw-alias-scrollbar-bg-l1) calc(var(--dsh-width-handle-pointer-y, 50%) - 8px),
+      var(--dsw-alias-scrollbar-bg-l1) calc(var(--dsh-width-handle-pointer-y, 50%) + 8px),
+      transparent calc(var(--dsh-width-handle-pointer-y, 50%) + 36px));
   opacity: 0;
   pointer-events: none;
 }
@@ -489,15 +499,13 @@
   flex-direction: column;
   min-height: 0;
 
-  /* Shared width axis for the transcript, dock cards, composer, and takeover
-     cards. Main width controls publish the live body width and optional user
-     preference; embedded occurrences override this adaptive axis below. */
+  /* Shared width axis aligned with Kimi Work's 800px conversation column and composer. */
   --dsh-chat-content-width-resolved: var(
     --dsh-chat-user-width,
-    clamp(680px, calc(var(--dsh-conversation-column-width) * 0.64), 880px)
+    clamp(560px, calc(var(--dsh-conversation-column-width) - 48px), 800px)
   );
   --dsh-chat-content-width: var(--dsh-chat-content-width-resolved);
-  --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
+  --dsh-composer-card-max-width: var(--dsh-chat-content-width);
   --dsh-composer-side-clearance: 16px;
   --dsh-composer-dock-inset: 8px;
 
@@ -517,26 +525,20 @@
      another box. The inset applies at once unless the stylesheet also sets
      --dsh-chat-end-reserve-transition, a duration and an easing, for as long
      as it wants a change of the inset animated. */
-  --dsh-chat-end-reserve-max: calc(
-    var(--dsh-conversation-viewport-width) - var(--dsh-chat-content-width-resolved) - var(--dsh-composer-side-clearance) - 16px
-  );
+  --dsh-chat-end-reserve-max: calc(var(--dsh-conversation-viewport-width) - var(--dsh-chat-content-width-resolved) - var(--dsh-composer-side-clearance) - 16px);
   /* The first term is 0 for a reserve above the maximum and at least 1000px, above any inset, otherwise: a
      step at the maximum, within a ten-thousandth of a pixel. */
-  --dsh-chat-end-inset-resolved: min(
-    max(0px, calc((var(--dsh-chat-end-reserve-max) - var(--dsh-chat-end-reserve, 0px)) * 10000000 + 1000px)),
-    calc(2 * max(
-      0px,
-      var(--dsh-chat-end-reserve, 0px) - (var(--dsh-conversation-viewport-width) - var(--dsh-chat-content-width-resolved)) / 2
-    ))
-  );
+  --dsh-chat-end-inset-resolved: min(max(0px, calc((var(--dsh-chat-end-reserve-max) - var(--dsh-chat-end-reserve, 0px)) * 10000000 + 1000px)),
+      calc(2 * max(0px,
+          var(--dsh-chat-end-reserve, 0px) - (var(--dsh-conversation-viewport-width) - var(--dsh-chat-content-width-resolved)) / 2)));
   --dsh-chat-end-inset: var(--dsh-chat-end-inset-resolved);
 }
 
 /* An embedded occurrence makes no room: its column already follows its frame's width. */
 .embeddedBody {
   overflow: hidden;
-  --dsh-chat-content-width: min(calc(100% - 32px), 880px);
-  --dsh-composer-card-max-width: min(calc(100% - 16px), 912px);
+  --dsh-chat-content-width: min(calc(100% - 32px), 800px);
+  --dsh-composer-card-max-width: min(calc(100% - 16px), 800px);
   --dsh-composer-side-clearance: 8px;
   --dsh-composer-dock-inset: 8px;
   --dsh-chat-end-reserve-max: 0px;
@@ -606,11 +608,9 @@
      region and the fade band never stretches. The 0px stop is bg-base at
      zero alpha (not white, which the figma export hardcodes) so both themes
      fade from their own base. */
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px,
-    var(--dsw-alias-bg-base) 44px
-  );
+  background: linear-gradient(180deg,
+      color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px,
+      var(--dsw-alias-bg-base) 44px);
 }
 
 /* Views may opt into a composer overlay while ConversationRoot retains
@@ -631,13 +631,13 @@
   scrollbar-gutter: auto;
 }
 
-.scrollBody:has([data-conversation-composer-overlay]) > :global([data-slot='conversation.session']) > .viewArea {
+.scrollBody:has([data-conversation-composer-overlay])> :global([data-slot='conversation.session'])>.viewArea {
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
 }
 
-.scrollBody:has([data-conversation-composer-overlay]) > .composerSeat {
+.scrollBody:has([data-conversation-composer-overlay])>.composerSeat {
   position: absolute;
   /* Chat's seat rides this box's content box, which its own scrolling shortens
      by the bar's width; the overlay seat is against the padding box, so it

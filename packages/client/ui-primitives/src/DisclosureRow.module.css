@@ -35,8 +35,8 @@
   align-items: center;
   height: calc(24px + var(--dsh-content-font-delta, 0px));
   min-width: 0;
-  color: var(--dsw-alias-label-tertiary);
-  transition: color 100ms ease;
+  color: var(--dsw-alias-label-secondary);
+  transition: color 150ms ease;
 }
 
 .row[data-expandable] {
@@ -45,7 +45,7 @@
 
 @media (hover: hover) {
   .row:hover {
-    color: var(--dsw-alias-label-secondary);
+    color: var(--dsw-alias-label-primary);
   }
 }
 

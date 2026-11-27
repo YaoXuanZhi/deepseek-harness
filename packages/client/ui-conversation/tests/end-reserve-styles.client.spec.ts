@@ -51,7 +51,7 @@ describe('Conversation body end reserve', () => {
     })
     // The inherited public names repeat a computed length, whose text changes only with the resolved width.
     expect(body['--dsh-chat-content-width-resolved']).toBe(
-      'var(--dsh-chat-user-width, clamp(680px, calc(var(--dsh-conversation-column-width) * 0.64), 880px))',
+      'var(--dsh-chat-user-width, clamp(560px, calc(var(--dsh-conversation-column-width) - 48px), 800px))',
     )
     expect(body['--dsh-chat-content-width']).toBe('var(--dsh-chat-content-width-resolved)')
   })

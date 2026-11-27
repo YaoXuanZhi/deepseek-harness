@@ -88,7 +88,7 @@ const CHROME_ROWS: readonly ChromeRow[] = [
     file: CONVERSATION,
     selector: '.header',
     markup: 'client/ui-conversation/src/client/skeleton/ConversationHeader.tsx',
-    height: ['min-height', '48px'],
+    height: ['min-height', '52px'],
   },
   {
     file: DOCKKIT,

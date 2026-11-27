@@ -1,9 +1,8 @@
-
 .root {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 var(--dsh-composer-side-clearance) 14px;
+  padding: 0 var(--dsh-composer-side-clearance) 16px;
 }
 
 .dock {
@@ -51,23 +50,22 @@
 
 .card {
   box-sizing: border-box;
-  position: relative; /* overlay anchor positioning context */
+  position: relative;
+  /* overlay anchor positioning context */
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   max-width: var(--dsh-composer-card-max-width);
-  padding-top: 10px;
+  padding: 12px 8px 8px;
   border: 0;
   --dsw-elevation-stroke-color: var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-xl);
+  border-radius: var(--dsw-radius-xxl);
   background: var(--dsw-specific-input-major);
   box-shadow: var(--dsw-elevation-soft);
-  /* The draft text follows the Settings font-size preference (the textarea,
-     mirror, and backdrop all inherit from here, so the three layers stay in
-     step); the line height keeps the default 10px leading via the shared px
-     delta. */
-  font-size: var(--dsh-content-font-size, 14px);
+  transition: box-shadow 180ms cubic-bezier(0.2, 0, 0, 1);
+  /* Match Kimi Work's 16px/24px composer editor scale while following the Settings delta. */
+  font-size: calc(16px + var(--dsh-content-font-delta, 0px));
   line-height: calc(24px + var(--dsh-content-font-delta, 0px));
   /* Elevated surface in dark, same as the menus: the draft scrollport inside
      scrolls once the composer hits its height cap, so the thumb takes the l2
@@ -76,6 +74,16 @@
      (see ui-theme styles/scrollbar.css for the rebinding contract). */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+.card:focus-within {
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l3);
+}
+
+@media (hover: hover) {
+  .card:hover {
+    --dsw-elevation-stroke-color: var(--dsw-alias-border-l3);
+  }
 }
 
 @media (pointer: coarse) {
@@ -98,7 +106,7 @@
   inset: 0;
   box-sizing: border-box;
   border: 1px dashed currentColor;
-  border-radius: var(--dsw-radius-panel);
+  border-radius: var(--dsw-radius-xxl);
   color: var(--dsw-alias-border-l4);
   transition: color 100ms ease;
   pointer-events: none;
@@ -168,8 +176,13 @@
 }
 
 @keyframes input-pending {
-  from { opacity: 0.35; }
-  to { opacity: 1; }
+  from {
+    opacity: 0.35;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* The contenteditable draft surface (grows with its content; .scroll caps
@@ -178,10 +191,8 @@
    bar inset. */
 .input {
   box-sizing: border-box;
-  /* Docked floor: one 24px line + 4px top pad = 28 content height; 36 leaves
-     an 8px breath below the line (the hero keeps its own 52px floor below). */
-  min-height: 36px;
-  padding: 4px 8px 0 14px;
+  min-height: 48px;
+  padding: 0 8px;
   font-family: var(--dsw-font-family);
   font-size: inherit;
   line-height: inherit;
@@ -217,7 +228,7 @@
   caret-color: transparent;
 }
 
-.input[data-composer-composing] + .placeholder {
+.input[data-composer-composing]+.placeholder {
   visibility: hidden;
 }
 
@@ -227,8 +238,8 @@
    36px floor. */
 .placeholder {
   position: absolute;
-  inset: 4px 8px auto 14px;
-  color: var(--dsw-alias-label-caption);
+  inset: 0 8px auto 8px;
+  color: var(--dsw-alias-label-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -268,8 +279,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 4px 8px 8px;
+  gap: 8px;
+  padding: 0;
   min-width: 0;
   /* Size container so the chips inside can collapse to icon-only when the
      card runs out of row width (PermissionSelect @container rule). Anonymous
@@ -295,11 +306,11 @@
    Read-only; both gaps settled on 12 so the pill chips read as separate
    controls without drifting from the + control. */
 .tools {
-  gap: 12px;
+  gap: 4px;
 }
 
 .modes {
-  gap: 12px;
+  gap: 4px;
 }
 
 .trailing {
@@ -310,36 +321,38 @@
      model trigger (external:107). The auto margin re-anchors it right on the
      wrapped line; on a single line space-between already pins it right. */
   margin-left: auto;
-  gap: 12px;
+  gap: 4px;
 }
 
 /* Compact spacing preserves room for the fixed-width controls in narrow cards. */
 @container (max-width: 560px) {
+
   .tools,
   .modes,
   .trailing {
-    gap: 8px;
+    gap: 4px;
   }
 }
 
-/* The attachment and send controls share a diameter and vertical center. */
+/* The attachment and send controls share Kimi Work's 36px diameter and vertical center. */
 .add {
   display: grid;
   place-items: center;
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 999px;
   corner-shape: round;
-  background: var(--dsw-specific-selector);
+  background: transparent;
   color: var(--dsw-alias-label-primary);
   cursor: pointer;
+  transition: background-color 150ms ease;
 }
 
 @media (hover: hover) {
   .add:hover:not(:disabled) {
-    background: var(--dsw-alias-interactive-bg-hover-solid);
+    background: var(--dsw-alias-interactive-bg-hover);
   }
 }
 
@@ -388,8 +401,8 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 999px;
   corner-shape: round;
@@ -433,7 +446,9 @@
 }
 
 @keyframes input-sending {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .retry {
@@ -447,9 +462,34 @@
   cursor: pointer;
 }
 
-.standardControls { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.tools[hidden], .standardControls[hidden] { display: none; }
-.trailingActive { flex: 1; margin-left: 0; }
-.activity { display: flex; align-items: center; flex: none; }
-.activity:empty { display: none; }
-.activityExpanded { flex: 1; min-width: 0; }
+.standardControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tools[hidden],
+.standardControls[hidden] {
+  display: none;
+}
+
+.trailingActive {
+  flex: 1;
+  margin-left: 0;
+}
+
+.activity {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.activity:empty {
+  display: none;
+}
+
+.activityExpanded {
+  flex: 1;
+  min-width: 0;
+}

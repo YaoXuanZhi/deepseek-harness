@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest'
 const css = readFileSync(new URL('../src/client/skeleton/ConversationRoot.module.css', import.meta.url), 'utf8')
 
 describe('conversation header geometry', () => {
-  it('keeps the single-row borderless header at the 48px height', () => {
+  it('keeps the single-row borderless header at the 52px height', () => {
     const header = css.match(/\.header\s*\{([^}]*)\}/)?.[1]
-    expect(header).toContain('min-height: 48px')
+    expect(header).toContain('min-height: 52px')
     expect(header).toContain('border-bottom: none')
     expect(css.match(/\.tab\s*\{([^}]*)\}/)?.[1]).toContain('height: 24px')
   })

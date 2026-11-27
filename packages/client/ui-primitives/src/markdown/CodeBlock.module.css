@@ -3,20 +3,20 @@
 
 .block {
   --dsl-code-block-banner-background-color: var(--dsw-alias-markdown-code-block-banner);
-  --dsl-code-block-border-radius: var(--dsw-radius-sm);
-  --dsl-code-block-banner-font: 12px/18px var(--dsw-font-family);
+  --dsl-code-block-border-radius: var(--dsw-radius-md);
+  --dsl-code-block-banner-font: 14px/22px var(--dsw-font-family);
   --dsl-code-block-content-font: var(--dsw-font-markdown-code);
   --dsl-code-block-background: var(--dsw-alias-markdown-code-block);
 
   position: relative;
-  margin: 12px 0;
+  margin: 0 0 16px;
   color: var(--dsw-alias-label-primary);
   background: var(--dsl-code-block-background);
   border-radius: var(--dsl-code-block-border-radius);
 }
 
 .block:not(:last-child) {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .bannerWrap {
@@ -32,7 +32,7 @@
 
 .banner {
   background: var(--dsl-code-block-banner-background-color);
-  padding: 8px 12px 8px 16px;
+  padding: 8px 8px 8px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -45,9 +45,9 @@
 .infostring {
   color: var(--dsw-alias-label-primary);
   font-family: var(--dsw-font-family);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 22px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

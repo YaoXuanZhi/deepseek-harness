@@ -4,17 +4,16 @@
   gap: 4px;
   min-width: 0;
   max-width: 220px;
-  height: 28px;
-  padding: 0 4px 0 12px;
+  height: 36px;
+  padding: 0 10px;
   border: none;
-  /* Rounded chip chrome, matching the sibling model trigger. */
-  border-radius: var(--dsw-radius-sm);
+  border-radius: var(--dsw-radius-xl);
   outline: none;
   background: transparent;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
   line-height: 20px;
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
 }
 

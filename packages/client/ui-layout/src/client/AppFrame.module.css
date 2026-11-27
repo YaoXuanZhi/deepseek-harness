@@ -5,7 +5,7 @@
   height: 100%;
   box-sizing: border-box;
   overflow: hidden;
-  background: var(--dsw-alias-bg-base);
+  background: var(--dsw-specific-sidebar-fill);
 }
 
 /* Only discrete collapse/expand and fold changes ease the tracks (the TSX holds
@@ -25,16 +25,21 @@
 
 /* The Windows caption row remains outside every conversation and file panel. */
 :global([data-windows-titlebar]) .frame {
-  --dsh-windows-content-radius: 16px;
+  --dsh-windows-content-radius: var(--dsw-radius-sm);
   box-sizing: border-box;
   padding-top: var(--dsh-windows-titlebar-height);
   background: var(--dsw-specific-sidebar-fill);
 }
 
 :global([data-windows-titlebar]) .centerCol {
+  margin: 0 6px 6px 0;
   background: var(--dsw-alias-bg-base);
-  border-radius: var(--dsh-windows-content-radius) 0 0 0;
-  corner-shape: round;
+  border-radius: var(--dsh-windows-content-radius);
+}
+
+:global([data-windows-titlebar]) .frame[data-sidebar-collapsed] .centerCol,
+:global([data-windows-titlebar]) .frame[data-sidebar-drawer] .centerCol {
+  margin-left: 6px;
 }
 
 :global([data-windows-titlebar]) .frame::before {
@@ -62,16 +67,33 @@
   min-width: 0;
   overflow: hidden;
   background: var(--dsw-specific-sidebar-fill);
-  border-right: 0.5px solid var(--dsw-alias-border-l3);
+  border-right: none;
 }
 
+/* Inset rounded content window (.main-pane) floating on the warm shell ground. */
 .centerCol {
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  margin: 6px 6px 6px 0;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-bg-base);
   overflow: hidden;
+  transition: margin-left var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+.frame[data-sidebar-collapsed] .centerCol,
+.frame[data-sidebar-drawer] .centerCol {
+  margin-left: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .centerCol {
+    transition: none;
+  }
 }
 
 .mainPanel {

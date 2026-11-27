@@ -71,8 +71,9 @@ describe('Running status entrance after admitted steering', () => {
   })
 
   it('sizes the first output rows to one font-scaled row', () => {
+    const bodyRow = String.raw`calc\(26px \+ var\(--dsh-content-font-delta, 0px\)\)`
     expect(read('ReasoningRow.module.css')).toMatch(new RegExp(String.raw`\.root:not\(\[data-expanded\]\) \{[^}]*height: ${row};`))
     expect(read('ChatGroupSeat.module.css')).toMatch(new RegExp(String.raw`\.title \{[^}]*line-height: ${row};`))
-    expect(read('AssistantMarkdown.module.css')).toMatch(new RegExp(String.raw`\.root \{[^}]*line-height: ${row};`))
+    expect(read('AssistantMarkdown.module.css')).toMatch(new RegExp(String.raw`\.root \{[^}]*line-height: ${bodyRow};`))
   })
 })
